@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logistics Roster System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* --- THEME: INDUSTRIAL CLARITY --- */
+        :root {
+            --navy: #001F3F;
+            --blue-light: #e3f2fd;
+            --light-grey: #f4f4f4;
+            --white: #ffffff;
+            --border: #ddd;
+            
+            /* Excel Colors */
+            --shift-day: #fff9c4; /* Yellowish */
+            --shift-night: #e1f5fe; /* Blueish */
+            --rest-day: #efebe9; /* Beige */
+            --overtime: #ffcdd2; /* Red */
+        }
+
+        body { margin: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--light-grey); color: #333; height: 100vh; display: flex; flex-direction: column; }
+        .hidden { display: none !important; }
+
+        /* --- LAYOUT --- */
+        .header { background: var(--navy); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10;}
+        .main-container { display: flex; flex: 1; overflow: hidden; }
+        
+        .sidebar { width: 220px; background: white; border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 5;}
+        .menu-item { padding: 15px 20px; cursor: pointer; color: #555; border-left: 4px solid transparent; display: flex; align-items: center; gap: 10px; }
+        .menu-item:hover { background: #f9f9f9; color: var(--navy); }
+        .menu-item.active { background: #e8eaf6; color: var(--navy); border-left-color: var(--navy); font-weight: bold; }
+
+        .content-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+
+        /* --- ROSTER GRID (EXCEL STYLE) --- */
+        .roster-wrapper { flex: 1; overflow: auto; position: relative; background: white; }
+        
+        table { border-collapse: separate; border-spacing: 0; min-width: 100%; }
+        
+        /* Sticky Headers */
+        thead th { position: sticky; top: 0; background: var(--navy); color: white; z-index: 20; padding: 10px; font-size: 12px; border-right: 1px solid #003366; text-transform: uppercase; height: 40px;}
+        thead th:first-child { position: sticky; left: 0; z-index: 30; width: 80px; }
+        thead th:nth-child(2) { position: sticky; left: 80px; z-index: 30; width: 150px; }
+        
+        /* Rows */
+        tbody td { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); padding: 0; height: 40px; font-size: 12px; text-align: center; vertical-align: middle; position: relative;}
+        
+        /* Sticky Columns */
+        tbody td:first-child { position: sticky; left: 0; background: #f8f9fa; font-weight: bold; z-index: 10; border-right: 2px solid var(--border); }
+        tbody td:nth-child(2) { position: sticky; left: 80px; background: #f8f9fa; text-align: left; padding-left: 10px; z-index: 10; border-right: 2px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;}
+
+        /* Shift Cells */
+        .shift-cell { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; transition: background 0.2s; }
+        .shift-cell:hover { filter: brightness(0.95); box-shadow: inset 0 0 0 2px var(--navy); }
+        
+        /* Shift Types */
+        .type-6DS { background-color: var(--shift-day); color: #f57f17; font-weight: bold; }
+        .type-18NS { background-color: var(--shift-night); color: #0d47a1; font-weight: bold; }
+        .type-RD { background-color: var(--rest-day); color: #795548; font-weight: bold; }
+        .type-RD-OT { background-color: var(--overtime); color: #b71c1c; font-weight: bold; }
+        
+        .sub-text { font-size: 9px; color: #666; font-weight: normal; margin-top: 2px; }
+
+        /* --- BOTTOM STATS BAR --- */
+        .stats-bar { height: 60px; background: white; border-top: 2px solid var(--navy); display: flex; align-items: center; padding: 0 20px; gap: 30px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 20;}
+        .stat-box { display: flex; flex-direction: column; }
+        .stat-label { font-size: 10px; color: #888; text-transform: uppercase; font-weight: bold; }
+        .stat-value { font-size: 18px; font-weight: bold; color: var(--navy); }
+        .stat-value.warning { color: var(--red); }
+
+        /* --- MODAL --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; display: flex; justify-content: center; align-items: center; }
+        .modal { background: white; padding: 25px; border-radius: 8px; width: 300px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .modal h3 { margin-top: 0; color: var(--navy); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 12px; margin-bottom: 5px; color: #666; }
+        .form-group select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .btn-primary { background: var(--navy); color: white; }
+        .btn-secondary { background: #eee; color: #333; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <i class="fa-solid fa-calendar-days fa-lg"></i>
+            <h2 style="margin: 0; font-size: 18px;">Driver Roster Management</h2>
+        </div>
+        <div style="font-size: 12px;">
+            User: <b>ADMIN-01</b> | Branch: <b>Head Office</b>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="menu-item active"><i class="fa-solid fa-table"></i> Master Roster</div>
+            <div class="menu-item"><i class="fa-solid fa-rotate"></i> Rotation Rules</div>
+            <div class="menu-item"><i class="fa-solid fa-chart-pie"></i> Headcount Stats</div>
+            <div class="menu-item"><i class="fa-solid fa-users-gear"></i> Driver Allocations</div>
+        </div>
+
+        <div class="content-area">
+            
+            <div class="roster-wrapper">
+                <table id="roster-table">
+                    <thead>
+                        </thead>
+                    <tbody id="roster-body">
+                        </tbody>
+                </table>
+            </div>
+
+            <div class="stats-bar">
+                <div class="stat-box">
+                    <span class="stat-label">Total Drivers</span>
+                    <span class="stat-value" id="total-drivers">0</span>
+                </div>
+                <div style="width: 1px; height: 30px; background: #ddd;"></div>
+                <div class="stat-box">
+                    <span class="stat-label">AM Shift Count (Target: 4)</span>
+                    <span class="stat-value" id="am-count">0</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">PM Shift Count (Target: 9)</span>
+                    <span class="stat-value" id="pm-count">0</span>
+                </div>
+                <div style="width: 1px; height: 30px; background: #ddd;"></div>
+                <div class="stat-box">
+                    <span class="stat-label">Compliance Alert</span>
+                    <span class="stat-value warning" id="alert-count" style="font-size: 14px;"><i class="fa-solid fa-check"></i> All Clear</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="edit-modal" class="hidden modal-overlay">
+        <div class="modal">
+            <h3>Edit Shift Assignment</h3>
+            <p id="modal-info" style="font-size: 12px; color: #666; margin-bottom: 20px;"></p>
+            
+            <div class="form-group">
+                <label>Shift Code</label>
+                <select id="shift-select">
+                    <option value="6DS">6DS - Day Shift (06:00)</option>
+                    <option value="18NS">18NS - Night Shift (18:00)</option>
+                    <option value="RD">RD - Rest Day</option>
+                    <option value="RD-OT">RD-OT - Rest Day Overtime</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Allocation (Route/Post)</label>
+                <select id="alloc-select">
+                    <option value="">-- General --</option>
+                    <option value="SIG1">SIG 1</option>
+                    <option value="SIG2">SIG 2</option>
+                    <option value="OCS">OCS</option>
+                    <option value="PSS1">PSS 1</option>
+                    <option value="CTS1">CTS 1</option>
+                </select>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveShift()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA MOCKUP (Based on your Images) ---
+        const drivers = [
+            { id: 'DV1', name: 'LOWEL KIRBY ESPIEL', base: 'AM4' },
+            { id: 'DV2', name: 'NOEL FLAMANO', base: 'SIG1' },
+            { id: 'DV3', name: 'ARTEMIO ROSALES', base: 'SIG2' },
+            { id: 'DV4', name: 'JEGER FACURIB', base: 'OCS' },
+            { id: 'DV5', name: 'JONATHAN ESMAO', base: 'PSS1' },
+            { id: 'DV6', name: 'JHE BENITEZ', base: 'PSS2' },
+            { id: 'DV7', name: 'FELIPE SACAYAN', base: 'BFS2' },
+            { id: 'DV8', name: 'CRIS CAGUIMBAL', base: 'BFS1' },
+            { id: 'DV9', name: 'LEO FARAON', base: 'CTS1' },
+            { id: 'DV10', name: 'MARLITO SIMEON', base: 'CTS2' },
+            { id: 'DV11', name: 'SVEN DELA CRUZ', base: 'AM1' },
+            { id: 'DV12', name: 'ARNOLD DAYANAN', base: 'AM2' },
+            { id: 'DV13', name: 'ARNOLD GELACIO', base: 'AM3' },
+        ];
+
+        // Generate Dates for Jan 1 - Jan 15 (Mock)
+        const dates = [];
+        for (let i = 1; i <= 15; i++) {
+            dates.push(`Jan ${i}`);
+        }
+
+        // State to hold the grid data
+        let rosterData = {}; 
+
+        // Initialize Data (Randomly assign shifts based on patterns)
+        drivers.forEach(d => {
+            rosterData[d.id] = {};
+            dates.forEach((date, index) => {
+                // Mock logic: Every 7th day is RD
+                let type = '18NS';
+                let alloc = d.base;
+                
+                if (d.base.includes('AM')) type = '6DS';
+                
+                if ((index + 1) % 7 === 0) {
+                    type = 'RD';
+                    alloc = '';
+                } else if ((index + 1) % 8 === 0) {
+                    // Simulate RD-OT scenario sometimes
+                    if(Math.random() > 0.7) {
+                        type = 'RD-OT';
+                        alloc = d.base;
+                    } else {
+                        type = '6DS'; // Rotate
+                    }
+                }
+
+                rosterData[d.id][date] = { type, alloc };
+            });
+        });
+
+        // --- RENDER FUNCTIONS ---
+
+        function renderGrid() {
+            const tableHead = document.querySelector('#roster-table thead');
+            const tableBody = document.querySelector('#roster-table tbody');
+
+            // 1. Render Headers
+            let headerHTML = `<tr><th>ID</th><th>DRIVER NAME</th><th>ALLOCATION</th>`;
+            dates.forEach(date => {
+                headerHTML += `<th>${date}</th>`;
+            });
+            headerHTML += `<th>DAYS BEFORE RD</th></tr>`;
+            tableHead.innerHTML = headerHTML;
+
+            // 2. Render Rows
+            let bodyHTML = '';
+            let amTotal = 0;
+            let pmTotal = 0; // Just for today (Index 0)
+
+            drivers.forEach(d => {
+                bodyHTML += `<tr>`;
+                bodyHTML += `<td>${d.id}</td>`;
+                bodyHTML += `<td>${d.name}</td>`;
+                bodyHTML += `<td>${d.base}</td>`;
+
+                let daysWithoutRest = 0;
+
+                dates.forEach((date, idx) => {
+                    const cellData = rosterData[d.id][date];
+                    let cellClass = `type-${cellData.type}`;
+                    
+                    // Count stats for Jan 1 (first column)
+                    if(idx === 0) {
+                        if(cellData.type === '6DS') amTotal++;
+                        if(cellData.type === '18NS') pmTotal++;
+                    }
+
+                    // Track days before RD logic
+                    if(cellData.type === 'RD') daysWithoutRest = 0;
+                    else daysWithoutRest++;
+
+                    bodyHTML += `
+                        <td onclick="openModal('${d.id}', '${date}')">
+                            <div class="shift-cell ${cellClass}">
+                                <span>${cellData.type}</span>
+                                ${cellData.alloc ? `<span class="sub-text">${cellData.alloc}</span>` : ''}
+                            </div>
+                        </td>
+                    `;
+                });
+
+                // Logic for "Days Before RD" column
+                let alertColor = daysWithoutRest > 6 ? 'color:red; font-weight:bold;' : 'color:green;';
+                bodyHTML += `<td style="${alertColor}">${daysWithoutRest} Days</td>`;
+                bodyHTML += `</tr>`;
+            });
+
+            tableBody.innerHTML = bodyHTML;
+
+            // Update Footer Stats
+            document.getElementById('total-drivers').innerText = drivers.length;
+            document.getElementById('am-count').innerText = amTotal;
+            document.getElementById('pm-count').innerText = pmTotal;
+            
+            // Stats Color Logic
+            const amEl = document.getElementById('am-count');
+            amEl.style.color = amTotal < 4 ? 'red' : '#001F3F'; // Assume target is 4
+            
+            const pmEl = document.getElementById('pm-count');
+            pmEl.style.color = pmTotal < 9 ? 'red' : '#001F3F'; // Assume target is 9
+        }
+
+        // --- INTERACTIVITY ---
+
+        let currentEdit = null;
+
+        function openModal(driverId, date) {
+            currentEdit = { driverId, date };
+            const driver = drivers.find(d => d.id === driverId);
+            const data = rosterData[driverId][date];
+
+            document.getElementById('modal-info').innerText = `Editing: ${driver.name} for ${date}`;
+            document.getElementById('shift-select').value = data.type;
+            document.getElementById('alloc-select').value = data.alloc || "";
+            
+            document.getElementById('edit-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('edit-modal').classList.add('hidden');
+            currentEdit = null;
+        }
+
+        function saveShift() {
+            if(!currentEdit) return;
+            
+            const type = document.getElementById('shift-select').value;
+            const alloc = document.getElementById('alloc-select').value;
+            
+            rosterData[currentEdit.driverId][currentEdit.date] = { type, alloc };
+            
+            closeModal();
+            renderGrid(); // Re-render to update colors and stats
+        }
+
+        // Initialize
+        renderGrid();
+
+    </script>
+</body>
+</html>
