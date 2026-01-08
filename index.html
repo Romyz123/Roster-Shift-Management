@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logistics Enterprise System</title>
+    <title>Dispatcher & Roster System</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
@@ -96,35 +96,27 @@
 
         .stats-footer { height: 50px; background: white; border-top: 2px solid var(--navy); display: flex; align-items: center; padding: 0 20px; gap: 30px; margin: 0 20px 20px 20px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 
-        /* --- VIEW 3: HR FILES --- */
-        .hr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; padding: 20px; overflow-y: auto; }
-        .hr-card { background: white; border-top: 4px solid var(--navy); border-radius: 8px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; transition: transform 0.2s; }
-        .hr-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
-        .hr-photo { width: 80px; height: 80px; border-radius: 50%; border: 3px solid #eee; object-fit: cover; margin-bottom: 10px; }
-
         /* --- MODALS --- */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; justify-content: center; align-items: center; }
-        .modal-content { background: white; width: 600px; max-height: 90vh; border-radius: 8px; overflow: hidden; animation: slideDown 0.2s; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+        .modal-content { background: white; width: 400px; border-radius: 8px; overflow: hidden; animation: slideDown 0.2s; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
         @keyframes slideDown { from {transform: translateY(-20px); opacity: 0;} to {transform: translateY(0); opacity: 1;} }
         
         .modal-header { background: var(--navy); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
-        .modal-tabs { display: flex; border-bottom: 1px solid #ddd; background: #f9f9f9; padding: 0 20px; }
-        .modal-tab { padding: 15px 20px; cursor: pointer; color: #666; border-bottom: 3px solid transparent; font-size: 13px; font-weight: 600; }
-        .modal-tab.active { color: var(--navy); border-bottom-color: var(--navy); background: white; }
-        .modal-body { padding: 25px; overflow-y: auto; }
-
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .form-group label { display: block; font-size: 11px; color: #888; margin-bottom: 5px; text-transform: uppercase; font-weight: bold; }
-        .info-display { background: #f4f4f4; padding: 10px; border-radius: 4px; border: 1px solid #eee; font-size: 14px; color: #333; }
+        .modal-body { padding: 20px; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 11px; color: #666; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
     </style>
 </head>
 <body>
 
     <div id="login-screen">
         <div class="login-card">
-            <i class="fa-solid fa-earth-asia fa-4x" style="color: var(--navy); margin-bottom: 20px;"></i>
-            <h2 style="color: var(--navy); margin-top: 0;">LOGISTICS ENTERPRISE</h2>
-            <p style="color: #666; font-size: 14px;">Integrated Operations System V9.0</p>
+            <i class="fa-solid fa-truck-fast fa-4x" style="color: var(--navy); margin-bottom: 20px;"></i>
+            <h2 style="color: var(--navy); margin-top: 0;">LOGISTICS SYSTEM</h2>
+            <p style="color: #666; font-size: 14px;">Dispatcher & Roster V10.0</p>
             <input type="text" placeholder="Admin ID" value="ADMIN-01">
             <input type="password" placeholder="Password" value="password">
             <button class="btn" style="width: 100%; justify-content: center; padding: 12px; font-size: 14px;" onclick="login()">SECURE LOGIN</button>
@@ -134,11 +126,9 @@
     <div id="dashboard-screen" class="hidden">
         
         <div class="sidebar">
-            <div class="sidebar-header"><i class="fa-solid fa-cubes-stacked"></i> OPS CENTER</div>
+            <div class="sidebar-header"><i class="fa-solid fa-satellite-dish"></i> OPS CENTER</div>
             <div class="menu-item active" onclick="showView('fleet-view', this)"><i class="fa-solid fa-map-location-dot"></i> Fleet Command</div>
             <div class="menu-item" onclick="showView('roster-view', this)"><i class="fa-solid fa-table"></i> Master Roster</div>
-            <div class="menu-item" onclick="showView('hr-view', this)"><i class="fa-solid fa-folder-user"></i> HR (201 Files)</div>
-            <div class="menu-item" onclick="showView('inventory-view', this)"><i class="fa-solid fa-boxes-stacked"></i> Inventory</div>
             <div style="margin-top: auto;"></div>
             <div class="menu-item" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Logout</div>
         </div>
@@ -152,7 +142,7 @@
             </div>
 
             <div id="fleet-view" class="view-section" style="height: 100%; display: flex; flex-direction: column;">
-                <div style="padding: 15px 20px; background: white; border-bottom: 1px solid #eee;">
+                <div style="padding: 15px 20px; background: white; border-bottom: 1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
                     <div class="kpi-row">
                         <div class="kpi-card" style="border-left-color: var(--green);">
                             <span style="color:#888;">AVAILABLE</span><br><b>4 Vehicles</b>
@@ -160,10 +150,8 @@
                         <div class="kpi-card" style="border-left-color: var(--blue-status);">
                             <span style="color:#888;">ON ROUTE</span><br><b>2 Vehicles</b>
                         </div>
-                        <div class="kpi-card" style="border-left-color: var(--amber);">
-                            <span style="color:#888;">MAINTENANCE</span><br><b>1 Vehicle</b>
-                        </div>
                     </div>
+                    <button class="btn" onclick="openAddVehicleModal()"><i class="fa-solid fa-plus"></i> Add Vehicle</button>
                 </div>
 
                 <div class="split-view">
@@ -183,6 +171,9 @@
             </div>
 
             <div id="roster-view" class="view-section hidden" style="height: 100%; display: flex; flex-direction: column;">
+                <div style="padding: 15px 20px; text-align: right;">
+                    <button class="btn" onclick="openAddDriverModal()"><i class="fa-solid fa-user-plus"></i> Add Driver Row</button>
+                </div>
                 <div class="roster-wrapper">
                     <table id="roster-table">
                         <thead></thead>
@@ -202,103 +193,100 @@
                 </div>
             </div>
 
-            <div id="hr-view" class="view-section hidden" style="height: 100%; overflow: hidden; display: flex; flex-direction: column;">
-                <div style="padding: 15px 20px; text-align: right;">
-                    <button class="btn"><i class="fa-solid fa-user-plus"></i> New Hire</button>
-                </div>
-                <div class="hr-grid">
-                    <div class="hr-card">
-                        <img src="https://i.pravatar.cc/150?img=11" class="hr-photo">
-                        <h4 style="margin:0; color:var(--navy);">John Doe</h4>
-                        <p style="margin:0; font-size:12px; color:#777;">Senior Driver</p>
-                        <div style="margin:10px 0;"><span class="badge green">ACTIVE</span></div>
-                        <button class="btn outline small" onclick="open201Modal('John Doe', 'Senior Driver', 'https://i.pravatar.cc/150?img=11')">View 201 File</button>
-                    </div>
-                     <div class="hr-card">
-                        <img src="https://i.pravatar.cc/150?img=3" class="hr-photo">
-                        <h4 style="margin:0; color:var(--navy);">Mike Santos</h4>
-                        <p style="margin:0; font-size:12px; color:#777;">Forklift Operator</p>
-                        <div style="margin:10px 0;"><span class="badge red">SICK LEAVE</span></div>
-                        <button class="btn outline small" onclick="open201Modal('Mike Santos', 'Forklift Operator', 'https://i.pravatar.cc/150?img=3')">View 201 File</button>
-                    </div>
-                     <div class="hr-card">
-                        <img src="https://i.pravatar.cc/150?img=5" class="hr-photo">
-                        <h4 style="margin:0; color:var(--navy);">Sarah Lee</h4>
-                        <p style="margin:0; font-size:12px; color:#777;">Dispatcher</p>
-                        <div style="margin:10px 0;"><span class="badge green">ACTIVE</span></div>
-                        <button class="btn outline small" onclick="open201Modal('Sarah Lee', 'Dispatcher', 'https://i.pravatar.cc/150?img=5')">View 201 File</button>
-                    </div>
-                     <div class="hr-card">
-                        <img src="https://i.pravatar.cc/150?img=13" class="hr-photo">
-                        <h4 style="margin:0; color:var(--navy);">Rico Jose</h4>
-                        <p style="margin:0; font-size:12px; color:#777;">Junior Driver</p>
-                        <div style="margin:10px 0;"><span class="badge amber">ON BREAK</span></div>
-                        <button class="btn outline small" onclick="open201Modal('Rico Jose', 'Junior Driver', 'https://i.pravatar.cc/150?img=13')">View 201 File</button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="inventory-view" class="view-section hidden" style="padding: 20px;">
-                <div style="background: white; border-radius: 8px; border: 1px solid var(--border); overflow: hidden;">
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <tr style="background: var(--navy); color: white; text-align: left;">
-                            <th style="padding: 15px;">SKU</th>
-                            <th>Item Name</th>
-                            <th>Location</th>
-                            <th>Qty</th>
-                            <th>Status</th>
-                        </tr>
-                        <tr><td style="padding:15px; border-bottom:1px solid #eee;">#SKU-901</td><td style="border-bottom:1px solid #eee;">Hydraulic Pump</td><td style="border-bottom:1px solid #eee;">Aisle 4-B</td><td style="border-bottom:1px solid #eee;">12</td><td style="border-bottom:1px solid #eee;"><span class="badge green">OK</span></td></tr>
-                        <tr><td style="padding:15px; border-bottom:1px solid #eee;">#SKU-221</td><td style="border-bottom:1px solid #eee;">Forklift Tires</td><td style="border-bottom:1px solid #eee;">Zone C</td><td style="border-bottom:1px solid #eee;">2</td><td style="border-bottom:1px solid #eee;"><span class="badge red">LOW</span></td></tr>
-                        <tr><td style="padding:15px; border-bottom:1px solid #eee;">#SKU-101</td><td style="border-bottom:1px solid #eee;">Safety Gloves</td><td style="border-bottom:1px solid #eee;">Bin A-1</td><td style="border-bottom:1px solid #eee;">500</td><td style="border-bottom:1px solid #eee;"><span class="badge green">OK</span></td></tr>
-                    </table>
-                </div>
-            </div>
-
         </div>
     </div>
 
-    <div id="file-modal" class="modal-overlay hidden">
+    <div id="shift-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <span style="font-weight: bold;"><i class="fa-solid fa-folder-open"></i> Employee 201 File</span>
-                <button onclick="closeModal('file-modal')" style="background:none; border:none; color:white; font-size:18px; cursor:pointer;">&times;</button>
-            </div>
-            <div class="modal-tabs">
-                <div class="modal-tab active">Personal Info</div>
-                <div class="modal-tab">Employment History</div>
-                <div class="modal-tab">Govt IDs</div>
+                <span>Edit Shift</span>
+                <button onclick="closeModal('shift-modal')" style="background:none; border:none; color:white; font-size:18px; cursor:pointer;">&times;</button>
             </div>
             <div class="modal-body">
-                <div style="display: flex; gap: 20px;">
-                    <div style="text-align: center; width: 120px;">
-                        <img id="modal-img" src="" style="width: 100px; height: 100px; border-radius: 8px; border: 1px solid #ddd; object-fit: cover;">
-                        <h3 id="modal-name-display" style="margin: 10px 0 0 0; font-size: 16px; color: var(--navy);"></h3>
-                    </div>
-                    <div style="flex: 1;">
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label>Full Name</label>
-                                <div class="info-display" id="modal-name"></div>
-                            </div>
-                            <div class="form-group">
-                                <label>Role / Position</label>
-                                <div class="info-display" id="modal-role"></div>
-                            </div>
-                            <div class="form-group">
-                                <label>SSS Number</label>
-                                <div class="info-display">33-9876543-1</div>
-                            </div>
-                            <div class="form-group">
-                                <label>TIN</label>
-                                <div class="info-display">123-456-789-000</div>
-                            </div>
-                            <div class="form-group" style="grid-column: span 2;">
-                                <label style="color: var(--red);">Emergency Contact</label>
-                                <div class="info-display"><b>Maria Doe (Spouse)</b> - 0917-000-0000</div>
-                            </div>
-                        </div>
-                    </div>
+                <p id="shift-modal-info" style="font-size:12px; color:#666; margin-bottom:15px;"></p>
+                <div class="form-group">
+                    <label>Shift Code</label>
+                    <select id="shift-select">
+                        <option value="6DS">6DS - Day Shift</option>
+                        <option value="18NS">18NS - Night Shift</option>
+                        <option value="RD">RD - Rest Day</option>
+                        <option value="RD-OT">RD-OT - Overtime</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Allocation (Route)</label>
+                    <input type="text" id="alloc-input" placeholder="e.g. SIG1">
+                </div>
+                <div class="modal-actions">
+                    <button class="btn outline" onclick="closeModal('shift-modal')">Cancel</button>
+                    <button class="btn" onclick="saveShift()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="add-vehicle-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Add New Vehicle</span>
+                <button onclick="closeModal('add-vehicle-modal')" style="background:none; border:none; color:white; font-size:18px; cursor:pointer;">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Plate Number</label>
+                    <input type="text" id="new-plate" placeholder="ABC-1234">
+                </div>
+                <div class="form-group">
+                    <label>Assigned Driver</label>
+                    <input type="text" id="new-driver-name" placeholder="Driver Name">
+                </div>
+                <div class="form-group">
+                    <label>Vehicle Type</label>
+                    <select id="new-type">
+                        <option>Isuzu Giga</option>
+                        <option>L300 Van</option>
+                        <option>Canter</option>
+                        <option>Wing Van</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="new-status">
+                        <option value="Available">Available</option>
+                        <option value="Maintenance">Maintenance</option>
+                        <option value="On Route">On Route</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn outline" onclick="closeModal('add-vehicle-modal')">Cancel</button>
+                    <button class="btn" onclick="saveNewVehicle()">Add Vehicle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="add-driver-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Add Driver to Roster</span>
+                <button onclick="closeModal('add-driver-modal')" style="background:none; border:none; color:white; font-size:18px; cursor:pointer;">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Driver Name</label>
+                    <input type="text" id="new-roster-name" placeholder="Full Name">
+                </div>
+                <div class="form-group">
+                    <label>Driver ID</label>
+                    <input type="text" id="new-roster-id" placeholder="DV-XX">
+                </div>
+                <div class="form-group">
+                    <label>Base Shift Allocation</label>
+                    <input type="text" id="new-base-alloc" placeholder="e.g. AM1 or SIG1">
+                </div>
+                <div class="modal-actions">
+                    <button class="btn outline" onclick="closeModal('add-driver-modal')">Cancel</button>
+                    <button class="btn" onclick="saveNewDriver()">Add Driver</button>
                 </div>
             </div>
         </div>
@@ -307,28 +295,25 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        // --- DATA: FLEET ---
-        const fleetData = [
+        // --- DATA: FLEET (Mutable) ---
+        let fleetData = [
             { id: 1, driver: "John Doe", img: "https://i.pravatar.cc/150?img=11", plate: "NCA-1234", type: "Isuzu Giga", status: "On Route", mileage: 45200, currentPos: [14.6507, 121.0285], startPos: [14.6760, 121.0437], endPos: [14.6091, 120.9814] },
             { id: 2, driver: "Rico Jose", img: "https://i.pravatar.cc/150?img=13", plate: "XLM-992", type: "L300 Van", status: "Available", mileage: 12500, currentPos: [14.6415, 121.0423], startPos: null, endPos: null },
-            { id: 3, driver: "Mike Santos", img: "https://i.pravatar.cc/150?img=3", plate: "RTY-551", type: "Wing Van", status: "Maintenance", mileage: 89000, currentPos: [14.6178, 121.0572], startPos: null, endPos: null },
             { id: 4, driver: "Alex Lim", img: "https://i.pravatar.cc/150?img=68", plate: "ABC-111", type: "Canter", status: "On Route", mileage: 33100, currentPos: [14.5844, 121.0609], startPos: [14.6178, 121.0572], endPos: [14.5547, 121.0244] }
         ];
 
-        // --- DATA: ROSTER (MOCK) ---
-        const rosterDrivers = [
+        // --- DATA: ROSTER (Mutable) ---
+        let rosterDrivers = [
             { id: 'DV1', name: 'Lowel Kirby', base: 'AM4' },
             { id: 'DV2', name: 'Noel Flamano', base: 'SIG1' },
             { id: 'DV3', name: 'Artemio Rosales', base: 'SIG2' },
             { id: 'DV4', name: 'Jeger Facurib', base: 'OCS' },
-            { id: 'DV5', name: 'Jonathan Esmao', base: 'PSS1' },
-            { id: 'DV6', name: 'Jhe Benitez', base: 'PSS2' },
         ];
         const dates = Array.from({length: 15}, (_, i) => `Jan ${i+1}`);
         let rosterState = {}; 
 
-        // Init Roster Data
-        rosterDrivers.forEach(d => {
+        // Init Roster Function (Reusable)
+        function initRosterStateForDriver(d) {
             rosterState[d.id] = {};
             dates.forEach((date, i) => {
                 let type = d.base.includes('AM') ? '6DS' : '18NS';
@@ -336,7 +321,9 @@
                 else if ((i + 1) % 8 === 0 && Math.random() > 0.5) type = 'RD-OT';
                 rosterState[d.id][date] = { type, alloc: type === 'RD' ? '' : d.base };
             });
-        });
+        }
+        // Init initial data
+        rosterDrivers.forEach(d => initRosterStateForDriver(d));
 
         // --- MAP VARIABLES ---
         let map, markers = {}, routeLine = null;
@@ -346,6 +333,14 @@
             if (map) return;
             map = L.map('map-container').setView([14.6450, 121.0350], 13);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            renderMapMarkers();
+        }
+
+        function renderMapMarkers() {
+            // Clear existing markers (simplification)
+            for(let id in markers) map.removeLayer(markers[id]);
+            markers = {};
+            
             fleetData.forEach(v => {
                 const marker = L.marker(v.currentPos).addTo(map);
                 marker.bindPopup(`<b>${v.plate}</b><br>${v.driver}`);
@@ -357,7 +352,7 @@
             const v = fleetData.find(x => x.id === id);
             if(!v) return;
             document.querySelectorAll('.fleet-item').forEach(el => el.classList.remove('selected'));
-            // Highlight list item (simple implementation)
+            // Highlight (omitted for brevity)
             
             if(map) {
                 if(routeLine) map.removeLayer(routeLine);
@@ -381,7 +376,7 @@
                         <img src="${v.img}" class="driver-avatar">
                         <div style="flex:1;">
                             <div style="font-weight:bold; color:var(--navy);">${v.plate} <span class="badge ${badge}">${v.status}</span></div>
-                            <div style="font-size:11px; color:#666;">${v.driver} • ${v.mileage.toLocaleString()} km</div>
+                            <div style="font-size:11px; color:#666;">${v.driver} • ${v.type}</div>
                         </div>
                         ${v.status === 'On Route' ? '<button class="btn small"><i class="fa-solid fa-crosshairs"></i></button>' : ''}
                     </div>
@@ -409,11 +404,14 @@
                     const cell = rosterState[d.id][date];
                     if(i === 0 && cell.type === '6DS') amCount++;
                     if(i === 0 && cell.type === '18NS') pmCount++;
+                    
                     bodyHTML += `
-                        <td><div class="shift-cell type-${cell.type}">
-                            <span>${cell.type}</span>
-                            <span style="font-size:9px; font-weight:normal;">${cell.alloc}</span>
-                        </div></td>
+                        <td onclick="openShiftModal('${d.id}', '${date}')">
+                            <div class="shift-cell type-${cell.type}">
+                                <span>${cell.type}</span>
+                                <span style="font-size:9px; font-weight:normal;">${cell.alloc}</span>
+                            </div>
+                        </td>
                     `;
                 });
                 bodyHTML += '</tr>';
@@ -423,13 +421,77 @@
             document.getElementById('pm-count').innerText = pmCount;
         }
 
-        // --- FUNCTIONS: MODALS ---
-        function open201Modal(name, role, img) {
-            document.getElementById('modal-name').innerText = name;
-            document.getElementById('modal-name-display').innerText = name;
-            document.getElementById('modal-role').innerText = role;
-            document.getElementById('modal-img').src = img;
-            document.getElementById('file-modal').classList.remove('hidden');
+        // --- FUNCTIONS: ADD VEHICLE LOGIC ---
+        function openAddVehicleModal() {
+            document.getElementById('add-vehicle-modal').classList.remove('hidden');
+        }
+
+        function saveNewVehicle() {
+            const plate = document.getElementById('new-plate').value;
+            const driver = document.getElementById('new-driver-name').value;
+            const type = document.getElementById('new-type').value;
+            const status = document.getElementById('new-status').value;
+
+            if(!plate || !driver) return alert("Fill all fields");
+
+            const newVehicle = {
+                id: fleetData.length + 100,
+                driver: driver,
+                img: "https://i.pravatar.cc/150?img=" + Math.floor(Math.random() * 70),
+                plate: plate,
+                type: type,
+                status: status,
+                mileage: 0,
+                // Randomize location slightly around QC for demo
+                currentPos: [14.64 + (Math.random() * 0.02), 121.03 + (Math.random() * 0.02)],
+                startPos: null, endPos: null
+            };
+
+            fleetData.push(newVehicle);
+            renderFleetList();
+            renderMapMarkers(); // Update map
+            closeModal('add-vehicle-modal');
+        }
+
+        // --- FUNCTIONS: ADD DRIVER LOGIC ---
+        function openAddDriverModal() {
+            document.getElementById('add-driver-modal').classList.remove('hidden');
+        }
+
+        function saveNewDriver() {
+            const name = document.getElementById('new-roster-name').value;
+            const id = document.getElementById('new-roster-id').value;
+            const base = document.getElementById('new-base-alloc').value;
+
+            if(!name || !id) return alert("Fill all fields");
+
+            const newDriver = { id, name, base };
+            rosterDrivers.push(newDriver);
+            initRosterStateForDriver(newDriver); // Generate data
+            
+            renderRoster();
+            closeModal('add-driver-modal');
+        }
+
+        // --- FUNCTIONS: EDIT SHIFT LOGIC ---
+        let currentShiftEdit = null;
+        function openShiftModal(driverId, date) {
+            currentShiftEdit = { driverId, date };
+            const data = rosterState[driverId][date];
+            document.getElementById('shift-modal-info').innerText = `Editing: ${driverId} on ${date}`;
+            document.getElementById('shift-select').value = data.type;
+            document.getElementById('alloc-input').value = data.alloc;
+            document.getElementById('shift-modal').classList.remove('hidden');
+        }
+
+        function saveShift() {
+            if(!currentShiftEdit) return;
+            const type = document.getElementById('shift-select').value;
+            const alloc = document.getElementById('alloc-input').value;
+            
+            rosterState[currentShiftEdit.driverId][currentShiftEdit.date] = { type, alloc };
+            renderRoster();
+            closeModal('shift-modal');
         }
 
         function closeModal(id) {
@@ -457,12 +519,7 @@
             el.classList.add('active');
             
             // Update Title
-            const titles = {
-                'fleet-view': 'Fleet Command',
-                'roster-view': 'Master Roster',
-                'hr-view': 'HR & 201 Files',
-                'inventory-view': 'Inventory System'
-            };
+            const titles = { 'fleet-view': 'Fleet Command', 'roster-view': 'Master Roster' };
             document.getElementById('page-title').innerText = titles[viewId];
 
             if(viewId === 'fleet-view') setTimeout(() => { if(map) map.invalidateSize(); }, 100);
