@@ -3,339 +3,475 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logistics Roster System</title>
+    <title>Logistics Enterprise System</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
         /* --- THEME: INDUSTRIAL CLARITY --- */
         :root {
             --navy: #001F3F;
-            --blue-light: #e3f2fd;
+            --blue-light: #3a506b;
             --light-grey: #f4f4f4;
             --white: #ffffff;
             --border: #ddd;
             
-            /* Excel Colors */
-            --shift-day: #fff9c4; /* Yellowish */
-            --shift-night: #e1f5fe; /* Blueish */
-            --rest-day: #efebe9; /* Beige */
-            --overtime: #ffcdd2; /* Red */
+            /* Status Colors */
+            --green: #2ECC40;
+            --amber: #FFDC00;
+            --red: #FF4136;
+            --blue-status: #3a506b;
+
+            /* Excel Roster Colors */
+            --shift-day: #fff9c4;
+            --shift-night: #e1f5fe;
+            --rest-day: #efebe9;
+            --overtime: #ffcdd2;
         }
 
         body { margin: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--light-grey); color: #333; height: 100vh; display: flex; flex-direction: column; }
         .hidden { display: none !important; }
 
-        /* --- LAYOUT --- */
-        .header { background: var(--navy); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10;}
-        .main-container { display: flex; flex: 1; overflow: hidden; }
+        /* --- UI COMPONENTS --- */
+        .btn { background-color: var(--navy); color: white; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s;}
+        .btn:hover { opacity: 0.9; }
+        .btn.outline { background: transparent; border: 1px solid var(--navy); color: var(--navy); }
+        .btn.small { padding: 4px 8px; font-size: 11px; }
         
-        .sidebar { width: 220px; background: white; border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 5;}
-        .menu-item { padding: 15px 20px; cursor: pointer; color: #555; border-left: 4px solid transparent; display: flex; align-items: center; gap: 10px; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; color: white; text-transform: uppercase; letter-spacing: 0.5px;}
+        .badge.green { background-color: var(--green); }
+        .badge.amber { background-color: var(--amber); color: black; }
+        .badge.red { background-color: var(--red); }
+        .badge.blue { background-color: var(--blue-status); }
+
+        /* --- LAYOUT --- */
+        #login-screen { height: 100vh; display: flex; justify-content: center; align-items: center; background-color: var(--navy); z-index: 9999; position: absolute; width: 100%; top: 0;}
+        .login-card { background: white; padding: 40px; border-radius: 8px; width: 350px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .login-card input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+
+        #dashboard-screen { display: flex; height: 100vh; width: 100%; }
+        
+        .sidebar { width: 240px; background: white; border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; z-index: 50; box-shadow: 2px 0 5px rgba(0,0,0,0.05);}
+        .sidebar-header { padding: 20px; background-color: var(--navy); color: white; font-weight: bold; display: flex; align-items: center; gap: 10px;}
+        .menu-item { padding: 15px 20px; cursor: pointer; color: #555; border-left: 5px solid transparent; display: flex; align-items: center; gap: 12px; transition: 0.2s;}
         .menu-item:hover { background: #f9f9f9; color: var(--navy); }
         .menu-item.active { background: #e8eaf6; color: var(--navy); border-left-color: var(--navy); font-weight: bold; }
 
-        .content-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        .header-bar { background: white; border-bottom: 1px solid var(--border); padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; }
 
-        /* --- ROSTER GRID (EXCEL STYLE) --- */
-        .roster-wrapper { flex: 1; overflow: auto; position: relative; background: white; }
+        /* --- VIEW 1: FLEET COMMAND (Split Screen) --- */
+        .split-view { display: flex; flex: 1; overflow: hidden; padding: 20px; gap: 20px; }
+        .fleet-list-panel { width: 350px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden; }
+        .map-panel { flex: 1; border-radius: 8px; border: 2px solid #ccc; position: relative; overflow: hidden; }
+        #map-container { height: 100%; width: 100%; }
+
+        .fleet-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 15px; cursor: pointer; transition: background 0.2s; }
+        .fleet-item:hover { background-color: #f0f4f8; }
+        .fleet-item.selected { background-color: #e3f2fd; border-left: 4px solid var(--navy); }
+        .driver-avatar { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #ddd; }
         
+        .kpi-row { display: flex; gap: 15px; }
+        .kpi-card { background: white; padding: 5px 15px; border-radius: 4px; border-left-width: 4px; border-left-style: solid; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-size: 11px; }
+
+        /* --- VIEW 2: ROSTER (Excel Grid) --- */
+        .roster-wrapper { flex: 1; overflow: auto; position: relative; background: white; margin: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         table { border-collapse: separate; border-spacing: 0; min-width: 100%; }
         
-        /* Sticky Headers */
-        thead th { position: sticky; top: 0; background: var(--navy); color: white; z-index: 20; padding: 10px; font-size: 12px; border-right: 1px solid #003366; text-transform: uppercase; height: 40px;}
+        thead th { position: sticky; top: 0; background: var(--navy); color: white; z-index: 20; padding: 10px; font-size: 12px; border-right: 1px solid #003366; text-transform: uppercase; height: 35px; }
         thead th:first-child { position: sticky; left: 0; z-index: 30; width: 80px; }
         thead th:nth-child(2) { position: sticky; left: 80px; z-index: 30; width: 150px; }
         
-        /* Rows */
-        tbody td { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); padding: 0; height: 40px; font-size: 12px; text-align: center; vertical-align: middle; position: relative;}
-        
-        /* Sticky Columns */
+        tbody td { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); padding: 0; height: 40px; font-size: 12px; text-align: center; vertical-align: middle; position: relative; }
         tbody td:first-child { position: sticky; left: 0; background: #f8f9fa; font-weight: bold; z-index: 10; border-right: 2px solid var(--border); }
-        tbody td:nth-child(2) { position: sticky; left: 80px; background: #f8f9fa; text-align: left; padding-left: 10px; z-index: 10; border-right: 2px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;}
+        tbody td:nth-child(2) { position: sticky; left: 80px; background: #f8f9fa; text-align: left; padding-left: 10px; z-index: 10; border-right: 2px solid var(--border); }
 
-        /* Shift Cells */
-        .shift-cell { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; transition: background 0.2s; }
-        .shift-cell:hover { filter: brightness(0.95); box-shadow: inset 0 0 0 2px var(--navy); }
+        .shift-cell { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; }
+        .shift-cell:hover { box-shadow: inset 0 0 0 2px var(--navy); }
         
-        /* Shift Types */
         .type-6DS { background-color: var(--shift-day); color: #f57f17; font-weight: bold; }
         .type-18NS { background-color: var(--shift-night); color: #0d47a1; font-weight: bold; }
         .type-RD { background-color: var(--rest-day); color: #795548; font-weight: bold; }
         .type-RD-OT { background-color: var(--overtime); color: #b71c1c; font-weight: bold; }
+
+        .stats-footer { height: 50px; background: white; border-top: 2px solid var(--navy); display: flex; align-items: center; padding: 0 20px; gap: 30px; margin: 0 20px 20px 20px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+
+        /* --- VIEW 3: HR FILES --- */
+        .hr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; padding: 20px; overflow-y: auto; }
+        .hr-card { background: white; border-top: 4px solid var(--navy); border-radius: 8px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; transition: transform 0.2s; }
+        .hr-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .hr-photo { width: 80px; height: 80px; border-radius: 50%; border: 3px solid #eee; object-fit: cover; margin-bottom: 10px; }
+
+        /* --- MODALS --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; justify-content: center; align-items: center; }
+        .modal-content { background: white; width: 600px; max-height: 90vh; border-radius: 8px; overflow: hidden; animation: slideDown 0.2s; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+        @keyframes slideDown { from {transform: translateY(-20px); opacity: 0;} to {transform: translateY(0); opacity: 1;} }
         
-        .sub-text { font-size: 9px; color: #666; font-weight: normal; margin-top: 2px; }
+        .modal-header { background: var(--navy); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .modal-tabs { display: flex; border-bottom: 1px solid #ddd; background: #f9f9f9; padding: 0 20px; }
+        .modal-tab { padding: 15px 20px; cursor: pointer; color: #666; border-bottom: 3px solid transparent; font-size: 13px; font-weight: 600; }
+        .modal-tab.active { color: var(--navy); border-bottom-color: var(--navy); background: white; }
+        .modal-body { padding: 25px; overflow-y: auto; }
 
-        /* --- BOTTOM STATS BAR --- */
-        .stats-bar { height: 60px; background: white; border-top: 2px solid var(--navy); display: flex; align-items: center; padding: 0 20px; gap: 30px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 20;}
-        .stat-box { display: flex; flex-direction: column; }
-        .stat-label { font-size: 10px; color: #888; text-transform: uppercase; font-weight: bold; }
-        .stat-value { font-size: 18px; font-weight: bold; color: var(--navy); }
-        .stat-value.warning { color: var(--red); }
-
-        /* --- MODAL --- */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; display: flex; justify-content: center; align-items: center; }
-        .modal { background: white; padding: 25px; border-radius: 8px; width: 300px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-        .modal h3 { margin-top: 0; color: var(--navy); }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; font-size: 12px; margin-bottom: 5px; color: #666; }
-        .form-group select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
-
-        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; }
-        .btn-primary { background: var(--navy); color: white; }
-        .btn-secondary { background: #eee; color: #333; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .form-group label { display: block; font-size: 11px; color: #888; margin-bottom: 5px; text-transform: uppercase; font-weight: bold; }
+        .info-display { background: #f4f4f4; padding: 10px; border-radius: 4px; border: 1px solid #eee; font-size: 14px; color: #333; }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <i class="fa-solid fa-calendar-days fa-lg"></i>
-            <h2 style="margin: 0; font-size: 18px;">Driver Roster Management</h2>
-        </div>
-        <div style="font-size: 12px;">
-            User: <b>ADMIN-01</b> | Branch: <b>Head Office</b>
+    <div id="login-screen">
+        <div class="login-card">
+            <i class="fa-solid fa-earth-asia fa-4x" style="color: var(--navy); margin-bottom: 20px;"></i>
+            <h2 style="color: var(--navy); margin-top: 0;">LOGISTICS ENTERPRISE</h2>
+            <p style="color: #666; font-size: 14px;">Integrated Operations System V9.0</p>
+            <input type="text" placeholder="Admin ID" value="ADMIN-01">
+            <input type="password" placeholder="Password" value="password">
+            <button class="btn" style="width: 100%; justify-content: center; padding: 12px; font-size: 14px;" onclick="login()">SECURE LOGIN</button>
         </div>
     </div>
 
-    <div class="main-container">
+    <div id="dashboard-screen" class="hidden">
+        
         <div class="sidebar">
-            <div class="menu-item active"><i class="fa-solid fa-table"></i> Master Roster</div>
-            <div class="menu-item"><i class="fa-solid fa-rotate"></i> Rotation Rules</div>
-            <div class="menu-item"><i class="fa-solid fa-chart-pie"></i> Headcount Stats</div>
-            <div class="menu-item"><i class="fa-solid fa-users-gear"></i> Driver Allocations</div>
+            <div class="sidebar-header"><i class="fa-solid fa-cubes-stacked"></i> OPS CENTER</div>
+            <div class="menu-item active" onclick="showView('fleet-view', this)"><i class="fa-solid fa-map-location-dot"></i> Fleet Command</div>
+            <div class="menu-item" onclick="showView('roster-view', this)"><i class="fa-solid fa-table"></i> Master Roster</div>
+            <div class="menu-item" onclick="showView('hr-view', this)"><i class="fa-solid fa-folder-user"></i> HR (201 Files)</div>
+            <div class="menu-item" onclick="showView('inventory-view', this)"><i class="fa-solid fa-boxes-stacked"></i> Inventory</div>
+            <div style="margin-top: auto;"></div>
+            <div class="menu-item" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Logout</div>
         </div>
 
-        <div class="content-area">
-            
-            <div class="roster-wrapper">
-                <table id="roster-table">
-                    <thead>
-                        </thead>
-                    <tbody id="roster-body">
-                        </tbody>
-                </table>
+        <div class="main-content">
+            <div class="header-bar">
+                <h2 id="page-title" style="margin: 0; font-size: 18px; color: var(--navy);">Fleet Command</h2>
+                <div style="font-size: 12px; color: #666;">
+                    <i class="fa-regular fa-clock"></i> <span id="clock">12:00 PM</span> | User: <b>ADMIN-01</b>
+                </div>
             </div>
 
-            <div class="stats-bar">
-                <div class="stat-box">
-                    <span class="stat-label">Total Drivers</span>
-                    <span class="stat-value" id="total-drivers">0</span>
+            <div id="fleet-view" class="view-section" style="height: 100%; display: flex; flex-direction: column;">
+                <div style="padding: 15px 20px; background: white; border-bottom: 1px solid #eee;">
+                    <div class="kpi-row">
+                        <div class="kpi-card" style="border-left-color: var(--green);">
+                            <span style="color:#888;">AVAILABLE</span><br><b>4 Vehicles</b>
+                        </div>
+                        <div class="kpi-card" style="border-left-color: var(--blue-status);">
+                            <span style="color:#888;">ON ROUTE</span><br><b>2 Vehicles</b>
+                        </div>
+                        <div class="kpi-card" style="border-left-color: var(--amber);">
+                            <span style="color:#888;">MAINTENANCE</span><br><b>1 Vehicle</b>
+                        </div>
+                    </div>
                 </div>
-                <div style="width: 1px; height: 30px; background: #ddd;"></div>
-                <div class="stat-box">
-                    <span class="stat-label">AM Shift Count (Target: 4)</span>
-                    <span class="stat-value" id="am-count">0</span>
+
+                <div class="split-view">
+                    <div class="fleet-list-panel">
+                        <div style="padding: 15px; border-bottom: 1px solid #eee; background: #fafafa; font-weight: bold; color: var(--navy);">Active Fleet Roster</div>
+                        <div id="fleet-list-container" style="overflow-y: auto;">
+                            </div>
+                    </div>
+                    <div class="map-panel">
+                        <div id="map-container"></div>
+                        <div style="position: absolute; bottom: 10px; left: 10px; background: rgba(255,255,255,0.9); padding: 10px; border-radius: 4px; font-size: 11px; z-index: 999; border: 1px solid #ccc;">
+                            <i class="fa-solid fa-circle" style="color: var(--blue-status);"></i> Route Path | 
+                            <i class="fa-solid fa-location-dot" style="color: var(--navy);"></i> Live Position
+                        </div>
+                    </div>
                 </div>
-                <div class="stat-box">
-                    <span class="stat-label">PM Shift Count (Target: 9)</span>
-                    <span class="stat-value" id="pm-count">0</span>
+            </div>
+
+            <div id="roster-view" class="view-section hidden" style="height: 100%; display: flex; flex-direction: column;">
+                <div class="roster-wrapper">
+                    <table id="roster-table">
+                        <thead></thead>
+                        <tbody id="roster-body"></tbody>
+                    </table>
                 </div>
-                <div style="width: 1px; height: 30px; background: #ddd;"></div>
-                <div class="stat-box">
-                    <span class="stat-label">Compliance Alert</span>
-                    <span class="stat-value warning" id="alert-count" style="font-size: 14px;"><i class="fa-solid fa-check"></i> All Clear</span>
+                <div class="stats-footer">
+                    <div>
+                        <span style="font-size: 10px; color:#888; font-weight:bold;">AM SHIFT COUNT</span><br>
+                        <b style="font-size: 16px; color: var(--navy);" id="am-count">0</b>
+                    </div>
+                    <div style="width:1px; height:20px; background:#ccc;"></div>
+                    <div>
+                        <span style="font-size: 10px; color:#888; font-weight:bold;">PM SHIFT COUNT</span><br>
+                        <b style="font-size: 16px; color: var(--navy);" id="pm-count">0</b>
+                    </div>
+                </div>
+            </div>
+
+            <div id="hr-view" class="view-section hidden" style="height: 100%; overflow: hidden; display: flex; flex-direction: column;">
+                <div style="padding: 15px 20px; text-align: right;">
+                    <button class="btn"><i class="fa-solid fa-user-plus"></i> New Hire</button>
+                </div>
+                <div class="hr-grid">
+                    <div class="hr-card">
+                        <img src="https://i.pravatar.cc/150?img=11" class="hr-photo">
+                        <h4 style="margin:0; color:var(--navy);">John Doe</h4>
+                        <p style="margin:0; font-size:12px; color:#777;">Senior Driver</p>
+                        <div style="margin:10px 0;"><span class="badge green">ACTIVE</span></div>
+                        <button class="btn outline small" onclick="open201Modal('John Doe', 'Senior Driver', 'https://i.pravatar.cc/150?img=11')">View 201 File</button>
+                    </div>
+                     <div class="hr-card">
+                        <img src="https://i.pravatar.cc/150?img=3" class="hr-photo">
+                        <h4 style="margin:0; color:var(--navy);">Mike Santos</h4>
+                        <p style="margin:0; font-size:12px; color:#777;">Forklift Operator</p>
+                        <div style="margin:10px 0;"><span class="badge red">SICK LEAVE</span></div>
+                        <button class="btn outline small" onclick="open201Modal('Mike Santos', 'Forklift Operator', 'https://i.pravatar.cc/150?img=3')">View 201 File</button>
+                    </div>
+                     <div class="hr-card">
+                        <img src="https://i.pravatar.cc/150?img=5" class="hr-photo">
+                        <h4 style="margin:0; color:var(--navy);">Sarah Lee</h4>
+                        <p style="margin:0; font-size:12px; color:#777;">Dispatcher</p>
+                        <div style="margin:10px 0;"><span class="badge green">ACTIVE</span></div>
+                        <button class="btn outline small" onclick="open201Modal('Sarah Lee', 'Dispatcher', 'https://i.pravatar.cc/150?img=5')">View 201 File</button>
+                    </div>
+                     <div class="hr-card">
+                        <img src="https://i.pravatar.cc/150?img=13" class="hr-photo">
+                        <h4 style="margin:0; color:var(--navy);">Rico Jose</h4>
+                        <p style="margin:0; font-size:12px; color:#777;">Junior Driver</p>
+                        <div style="margin:10px 0;"><span class="badge amber">ON BREAK</span></div>
+                        <button class="btn outline small" onclick="open201Modal('Rico Jose', 'Junior Driver', 'https://i.pravatar.cc/150?img=13')">View 201 File</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="inventory-view" class="view-section hidden" style="padding: 20px;">
+                <div style="background: white; border-radius: 8px; border: 1px solid var(--border); overflow: hidden;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr style="background: var(--navy); color: white; text-align: left;">
+                            <th style="padding: 15px;">SKU</th>
+                            <th>Item Name</th>
+                            <th>Location</th>
+                            <th>Qty</th>
+                            <th>Status</th>
+                        </tr>
+                        <tr><td style="padding:15px; border-bottom:1px solid #eee;">#SKU-901</td><td style="border-bottom:1px solid #eee;">Hydraulic Pump</td><td style="border-bottom:1px solid #eee;">Aisle 4-B</td><td style="border-bottom:1px solid #eee;">12</td><td style="border-bottom:1px solid #eee;"><span class="badge green">OK</span></td></tr>
+                        <tr><td style="padding:15px; border-bottom:1px solid #eee;">#SKU-221</td><td style="border-bottom:1px solid #eee;">Forklift Tires</td><td style="border-bottom:1px solid #eee;">Zone C</td><td style="border-bottom:1px solid #eee;">2</td><td style="border-bottom:1px solid #eee;"><span class="badge red">LOW</span></td></tr>
+                        <tr><td style="padding:15px; border-bottom:1px solid #eee;">#SKU-101</td><td style="border-bottom:1px solid #eee;">Safety Gloves</td><td style="border-bottom:1px solid #eee;">Bin A-1</td><td style="border-bottom:1px solid #eee;">500</td><td style="border-bottom:1px solid #eee;"><span class="badge green">OK</span></td></tr>
+                    </table>
                 </div>
             </div>
 
         </div>
     </div>
 
-    <div id="edit-modal" class="hidden modal-overlay">
-        <div class="modal">
-            <h3>Edit Shift Assignment</h3>
-            <p id="modal-info" style="font-size: 12px; color: #666; margin-bottom: 20px;"></p>
-            
-            <div class="form-group">
-                <label>Shift Code</label>
-                <select id="shift-select">
-                    <option value="6DS">6DS - Day Shift (06:00)</option>
-                    <option value="18NS">18NS - Night Shift (18:00)</option>
-                    <option value="RD">RD - Rest Day</option>
-                    <option value="RD-OT">RD-OT - Rest Day Overtime</option>
-                </select>
+    <div id="file-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span style="font-weight: bold;"><i class="fa-solid fa-folder-open"></i> Employee 201 File</span>
+                <button onclick="closeModal('file-modal')" style="background:none; border:none; color:white; font-size:18px; cursor:pointer;">&times;</button>
             </div>
-            
-            <div class="form-group">
-                <label>Allocation (Route/Post)</label>
-                <select id="alloc-select">
-                    <option value="">-- General --</option>
-                    <option value="SIG1">SIG 1</option>
-                    <option value="SIG2">SIG 2</option>
-                    <option value="OCS">OCS</option>
-                    <option value="PSS1">PSS 1</option>
-                    <option value="CTS1">CTS 1</option>
-                </select>
+            <div class="modal-tabs">
+                <div class="modal-tab active">Personal Info</div>
+                <div class="modal-tab">Employment History</div>
+                <div class="modal-tab">Govt IDs</div>
             </div>
-
-            <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="saveShift()">Save Changes</button>
+            <div class="modal-body">
+                <div style="display: flex; gap: 20px;">
+                    <div style="text-align: center; width: 120px;">
+                        <img id="modal-img" src="" style="width: 100px; height: 100px; border-radius: 8px; border: 1px solid #ddd; object-fit: cover;">
+                        <h3 id="modal-name-display" style="margin: 10px 0 0 0; font-size: 16px; color: var(--navy);"></h3>
+                    </div>
+                    <div style="flex: 1;">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Full Name</label>
+                                <div class="info-display" id="modal-name"></div>
+                            </div>
+                            <div class="form-group">
+                                <label>Role / Position</label>
+                                <div class="info-display" id="modal-role"></div>
+                            </div>
+                            <div class="form-group">
+                                <label>SSS Number</label>
+                                <div class="info-display">33-9876543-1</div>
+                            </div>
+                            <div class="form-group">
+                                <label>TIN</label>
+                                <div class="info-display">123-456-789-000</div>
+                            </div>
+                            <div class="form-group" style="grid-column: span 2;">
+                                <label style="color: var(--red);">Emergency Contact</label>
+                                <div class="info-display"><b>Maria Doe (Spouse)</b> - 0917-000-0000</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        // --- DATA MOCKUP (Based on your Images) ---
-        const drivers = [
-            { id: 'DV1', name: 'LOWEL KIRBY ESPIEL', base: 'AM4' },
-            { id: 'DV2', name: 'NOEL FLAMANO', base: 'SIG1' },
-            { id: 'DV3', name: 'ARTEMIO ROSALES', base: 'SIG2' },
-            { id: 'DV4', name: 'JEGER FACURIB', base: 'OCS' },
-            { id: 'DV5', name: 'JONATHAN ESMAO', base: 'PSS1' },
-            { id: 'DV6', name: 'JHE BENITEZ', base: 'PSS2' },
-            { id: 'DV7', name: 'FELIPE SACAYAN', base: 'BFS2' },
-            { id: 'DV8', name: 'CRIS CAGUIMBAL', base: 'BFS1' },
-            { id: 'DV9', name: 'LEO FARAON', base: 'CTS1' },
-            { id: 'DV10', name: 'MARLITO SIMEON', base: 'CTS2' },
-            { id: 'DV11', name: 'SVEN DELA CRUZ', base: 'AM1' },
-            { id: 'DV12', name: 'ARNOLD DAYANAN', base: 'AM2' },
-            { id: 'DV13', name: 'ARNOLD GELACIO', base: 'AM3' },
+        // --- DATA: FLEET ---
+        const fleetData = [
+            { id: 1, driver: "John Doe", img: "https://i.pravatar.cc/150?img=11", plate: "NCA-1234", type: "Isuzu Giga", status: "On Route", mileage: 45200, currentPos: [14.6507, 121.0285], startPos: [14.6760, 121.0437], endPos: [14.6091, 120.9814] },
+            { id: 2, driver: "Rico Jose", img: "https://i.pravatar.cc/150?img=13", plate: "XLM-992", type: "L300 Van", status: "Available", mileage: 12500, currentPos: [14.6415, 121.0423], startPos: null, endPos: null },
+            { id: 3, driver: "Mike Santos", img: "https://i.pravatar.cc/150?img=3", plate: "RTY-551", type: "Wing Van", status: "Maintenance", mileage: 89000, currentPos: [14.6178, 121.0572], startPos: null, endPos: null },
+            { id: 4, driver: "Alex Lim", img: "https://i.pravatar.cc/150?img=68", plate: "ABC-111", type: "Canter", status: "On Route", mileage: 33100, currentPos: [14.5844, 121.0609], startPos: [14.6178, 121.0572], endPos: [14.5547, 121.0244] }
         ];
 
-        // Generate Dates for Jan 1 - Jan 15 (Mock)
-        const dates = [];
-        for (let i = 1; i <= 15; i++) {
-            dates.push(`Jan ${i}`);
-        }
+        // --- DATA: ROSTER (MOCK) ---
+        const rosterDrivers = [
+            { id: 'DV1', name: 'Lowel Kirby', base: 'AM4' },
+            { id: 'DV2', name: 'Noel Flamano', base: 'SIG1' },
+            { id: 'DV3', name: 'Artemio Rosales', base: 'SIG2' },
+            { id: 'DV4', name: 'Jeger Facurib', base: 'OCS' },
+            { id: 'DV5', name: 'Jonathan Esmao', base: 'PSS1' },
+            { id: 'DV6', name: 'Jhe Benitez', base: 'PSS2' },
+        ];
+        const dates = Array.from({length: 15}, (_, i) => `Jan ${i+1}`);
+        let rosterState = {}; 
 
-        // State to hold the grid data
-        let rosterData = {}; 
-
-        // Initialize Data (Randomly assign shifts based on patterns)
-        drivers.forEach(d => {
-            rosterData[d.id] = {};
-            dates.forEach((date, index) => {
-                // Mock logic: Every 7th day is RD
-                let type = '18NS';
-                let alloc = d.base;
-                
-                if (d.base.includes('AM')) type = '6DS';
-                
-                if ((index + 1) % 7 === 0) {
-                    type = 'RD';
-                    alloc = '';
-                } else if ((index + 1) % 8 === 0) {
-                    // Simulate RD-OT scenario sometimes
-                    if(Math.random() > 0.7) {
-                        type = 'RD-OT';
-                        alloc = d.base;
-                    } else {
-                        type = '6DS'; // Rotate
-                    }
-                }
-
-                rosterData[d.id][date] = { type, alloc };
+        // Init Roster Data
+        rosterDrivers.forEach(d => {
+            rosterState[d.id] = {};
+            dates.forEach((date, i) => {
+                let type = d.base.includes('AM') ? '6DS' : '18NS';
+                if ((i + 1) % 7 === 0) type = 'RD';
+                else if ((i + 1) % 8 === 0 && Math.random() > 0.5) type = 'RD-OT';
+                rosterState[d.id][date] = { type, alloc: type === 'RD' ? '' : d.base };
             });
         });
 
-        // --- RENDER FUNCTIONS ---
+        // --- MAP VARIABLES ---
+        let map, markers = {}, routeLine = null;
 
-        function renderGrid() {
-            const tableHead = document.querySelector('#roster-table thead');
-            const tableBody = document.querySelector('#roster-table tbody');
-
-            // 1. Render Headers
-            let headerHTML = `<tr><th>ID</th><th>DRIVER NAME</th><th>ALLOCATION</th>`;
-            dates.forEach(date => {
-                headerHTML += `<th>${date}</th>`;
+        // --- FUNCTIONS: MAP ---
+        function initMap() {
+            if (map) return;
+            map = L.map('map-container').setView([14.6450, 121.0350], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            fleetData.forEach(v => {
+                const marker = L.marker(v.currentPos).addTo(map);
+                marker.bindPopup(`<b>${v.plate}</b><br>${v.driver}`);
+                markers[v.id] = marker;
             });
-            headerHTML += `<th>DAYS BEFORE RD</th></tr>`;
-            tableHead.innerHTML = headerHTML;
+        }
 
-            // 2. Render Rows
+        function focusVehicle(id) {
+            const v = fleetData.find(x => x.id === id);
+            if(!v) return;
+            document.querySelectorAll('.fleet-item').forEach(el => el.classList.remove('selected'));
+            // Highlight list item (simple implementation)
+            
+            if(map) {
+                if(routeLine) map.removeLayer(routeLine);
+                map.setView(v.currentPos, 14);
+                markers[v.id].openPopup();
+                if(v.status === 'On Route' && v.startPos && v.endPos) {
+                    routeLine = L.polyline([v.startPos, v.currentPos, v.endPos], {color: '#3a506b', weight: 4, dashArray: '10, 10'}).addTo(map);
+                    map.fitBounds(routeLine.getBounds(), {padding:[50,50]});
+                }
+            }
+        }
+
+        // --- FUNCTIONS: RENDERERS ---
+        function renderFleetList() {
+            const container = document.getElementById('fleet-list-container');
+            container.innerHTML = '';
+            fleetData.forEach(v => {
+                let badge = v.status === 'On Route' ? 'blue' : (v.status === 'Maintenance' ? 'amber' : 'green');
+                container.innerHTML += `
+                    <div class="fleet-item" onclick="focusVehicle(${v.id})">
+                        <img src="${v.img}" class="driver-avatar">
+                        <div style="flex:1;">
+                            <div style="font-weight:bold; color:var(--navy);">${v.plate} <span class="badge ${badge}">${v.status}</span></div>
+                            <div style="font-size:11px; color:#666;">${v.driver} • ${v.mileage.toLocaleString()} km</div>
+                        </div>
+                        ${v.status === 'On Route' ? '<button class="btn small"><i class="fa-solid fa-crosshairs"></i></button>' : ''}
+                    </div>
+                `;
+            });
+        }
+
+        function renderRoster() {
+            const thead = document.querySelector('#roster-table thead');
+            const tbody = document.querySelector('#roster-table tbody');
+            
+            // Header
+            let headerHTML = '<tr><th>ID</th><th>DRIVER NAME</th>';
+            dates.forEach(d => headerHTML += `<th>${d}</th>`);
+            headerHTML += '</tr>';
+            thead.innerHTML = headerHTML;
+
+            // Body
             let bodyHTML = '';
-            let amTotal = 0;
-            let pmTotal = 0; // Just for today (Index 0)
+            let amCount = 0, pmCount = 0;
 
-            drivers.forEach(d => {
-                bodyHTML += `<tr>`;
-                bodyHTML += `<td>${d.id}</td>`;
-                bodyHTML += `<td>${d.name}</td>`;
-                bodyHTML += `<td>${d.base}</td>`;
-
-                let daysWithoutRest = 0;
-
-                dates.forEach((date, idx) => {
-                    const cellData = rosterData[d.id][date];
-                    let cellClass = `type-${cellData.type}`;
-                    
-                    // Count stats for Jan 1 (first column)
-                    if(idx === 0) {
-                        if(cellData.type === '6DS') amTotal++;
-                        if(cellData.type === '18NS') pmTotal++;
-                    }
-
-                    // Track days before RD logic
-                    if(cellData.type === 'RD') daysWithoutRest = 0;
-                    else daysWithoutRest++;
-
+            rosterDrivers.forEach(d => {
+                bodyHTML += `<tr><td>${d.id}</td><td>${d.name}</td>`;
+                dates.forEach((date, i) => {
+                    const cell = rosterState[d.id][date];
+                    if(i === 0 && cell.type === '6DS') amCount++;
+                    if(i === 0 && cell.type === '18NS') pmCount++;
                     bodyHTML += `
-                        <td onclick="openModal('${d.id}', '${date}')">
-                            <div class="shift-cell ${cellClass}">
-                                <span>${cellData.type}</span>
-                                ${cellData.alloc ? `<span class="sub-text">${cellData.alloc}</span>` : ''}
-                            </div>
-                        </td>
+                        <td><div class="shift-cell type-${cell.type}">
+                            <span>${cell.type}</span>
+                            <span style="font-size:9px; font-weight:normal;">${cell.alloc}</span>
+                        </div></td>
                     `;
                 });
-
-                // Logic for "Days Before RD" column
-                let alertColor = daysWithoutRest > 6 ? 'color:red; font-weight:bold;' : 'color:green;';
-                bodyHTML += `<td style="${alertColor}">${daysWithoutRest} Days</td>`;
-                bodyHTML += `</tr>`;
+                bodyHTML += '</tr>';
             });
-
-            tableBody.innerHTML = bodyHTML;
-
-            // Update Footer Stats
-            document.getElementById('total-drivers').innerText = drivers.length;
-            document.getElementById('am-count').innerText = amTotal;
-            document.getElementById('pm-count').innerText = pmTotal;
-            
-            // Stats Color Logic
-            const amEl = document.getElementById('am-count');
-            amEl.style.color = amTotal < 4 ? 'red' : '#001F3F'; // Assume target is 4
-            
-            const pmEl = document.getElementById('pm-count');
-            pmEl.style.color = pmTotal < 9 ? 'red' : '#001F3F'; // Assume target is 9
+            tbody.innerHTML = bodyHTML;
+            document.getElementById('am-count').innerText = amCount;
+            document.getElementById('pm-count').innerText = pmCount;
         }
 
-        // --- INTERACTIVITY ---
-
-        let currentEdit = null;
-
-        function openModal(driverId, date) {
-            currentEdit = { driverId, date };
-            const driver = drivers.find(d => d.id === driverId);
-            const data = rosterData[driverId][date];
-
-            document.getElementById('modal-info').innerText = `Editing: ${driver.name} for ${date}`;
-            document.getElementById('shift-select').value = data.type;
-            document.getElementById('alloc-select').value = data.alloc || "";
-            
-            document.getElementById('edit-modal').classList.remove('hidden');
+        // --- FUNCTIONS: MODALS ---
+        function open201Modal(name, role, img) {
+            document.getElementById('modal-name').innerText = name;
+            document.getElementById('modal-name-display').innerText = name;
+            document.getElementById('modal-role').innerText = role;
+            document.getElementById('modal-img').src = img;
+            document.getElementById('file-modal').classList.remove('hidden');
         }
 
-        function closeModal() {
-            document.getElementById('edit-modal').classList.add('hidden');
-            currentEdit = null;
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
         }
 
-        function saveShift() {
-            if(!currentEdit) return;
-            
-            const type = document.getElementById('shift-select').value;
-            const alloc = document.getElementById('alloc-select').value;
-            
-            rosterData[currentEdit.driverId][currentEdit.date] = { type, alloc };
-            
-            closeModal();
-            renderGrid(); // Re-render to update colors and stats
+        // --- APP NAVIGATION ---
+        function login() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('dashboard-screen').classList.remove('hidden');
+            renderFleetList();
+            renderRoster();
+            setTimeout(() => { initMap(); map.invalidateSize(); }, 200);
         }
 
-        // Initialize
-        renderGrid();
+        function logout() {
+            document.getElementById('dashboard-screen').classList.add('hidden');
+            document.getElementById('login-screen').style.display = 'flex';
+        }
+
+        function showView(viewId, el) {
+            document.querySelectorAll('.view-section').forEach(v => v.classList.add('hidden'));
+            document.getElementById(viewId).classList.remove('hidden');
+            document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+            el.classList.add('active');
+            
+            // Update Title
+            const titles = {
+                'fleet-view': 'Fleet Command',
+                'roster-view': 'Master Roster',
+                'hr-view': 'HR & 201 Files',
+                'inventory-view': 'Inventory System'
+            };
+            document.getElementById('page-title').innerText = titles[viewId];
+
+            if(viewId === 'fleet-view') setTimeout(() => { if(map) map.invalidateSize(); }, 100);
+        }
+
+        // Clock
+        setInterval(() => {
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }, 1000);
 
     </script>
 </body>
