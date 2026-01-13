@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dispatcher & Roster System</title>
+    <title>Logistics Fleet Management System</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
@@ -37,6 +37,7 @@
         .btn:hover { opacity: 0.9; }
         .btn.outline { background: transparent; border: 1px solid var(--navy); color: var(--navy); }
         .btn.small { padding: 4px 8px; font-size: 11px; }
+        .btn.danger { background: var(--red); border-color: var(--red); color: white; }
         
         .badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; color: white; text-transform: uppercase; letter-spacing: 0.5px;}
         .badge.green { background-color: var(--green); }
@@ -72,7 +73,7 @@
         .driver-avatar { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #ddd; }
         
         .kpi-row { display: flex; gap: 15px; }
-        .kpi-card { background: white; padding: 5px 15px; border-radius: 4px; border-left-width: 4px; border-left-style: solid; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-size: 11px; }
+        .kpi-card { background: white; padding: 10px 15px; border-radius: 4px; border-left-width: 4px; border-left-style: solid; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-size: 11px; min-width: 120px; }
 
         /* --- VIEW 2: ROSTER (Excel Grid) --- */
         .roster-wrapper { flex: 1; overflow: auto; position: relative; background: white; margin: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
@@ -96,27 +97,41 @@
 
         .stats-footer { height: 50px; background: white; border-top: 2px solid var(--navy); display: flex; align-items: center; padding: 0 20px; gap: 30px; margin: 0 20px 20px 20px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 
+        /* --- VIEW 4: FLEET MANAGEMENT (NEW) --- */
+        .fleet-mgmt-grid { padding: 20px; overflow-y: auto; }
+        .data-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .data-table th { background-color: var(--navy); color: white; text-align: left; padding: 12px 15px; font-size: 12px; }
+        .data-table td { padding: 12px 15px; border-bottom: 1px solid #eee; font-size: 13px; }
+        .data-table tr:hover { background-color: #f9f9f9; }
+
         /* --- MODALS --- */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; justify-content: center; align-items: center; }
-        .modal-content { background: white; width: 400px; border-radius: 8px; overflow: hidden; animation: slideDown 0.2s; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+        .modal-content { background: white; width: 700px; max-height: 90vh; border-radius: 8px; overflow: hidden; animation: slideDown 0.2s; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
         @keyframes slideDown { from {transform: translateY(-20px); opacity: 0;} to {transform: translateY(0); opacity: 1;} }
         
         .modal-header { background: var(--navy); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
-        .modal-body { padding: 20px; }
+        .modal-body { padding: 20px; overflow-y: auto; }
         
+        .modal-tabs { display: flex; border-bottom: 1px solid #ddd; background: #f9f9f9; padding: 0 20px; }
+        .modal-tab { padding: 15px 20px; cursor: pointer; color: #666; border-bottom: 3px solid transparent; font-size: 13px; font-weight: 600; }
+        .modal-tab.active { color: var(--navy); border-bottom-color: var(--navy); background: white; }
+
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-size: 11px; color: #666; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; }
         .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        
+        .log-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; font-size: 13px; }
+        .log-item:last-child { border-bottom: none; }
     </style>
 </head>
 <body>
 
     <div id="login-screen">
         <div class="login-card">
-            <i class="fa-solid fa-truck-fast fa-4x" style="color: var(--navy); margin-bottom: 20px;"></i>
+            <i class="fa-solid fa-industry fa-4x" style="color: var(--navy); margin-bottom: 20px;"></i>
             <h2 style="color: var(--navy); margin-top: 0;">LOGISTICS SYSTEM</h2>
-            <p style="color: #666; font-size: 14px;">Dispatcher & Roster V10.0</p>
+            <p style="color: #666; font-size: 14px;">Fleet Management Suite V11.0</p>
             <input type="text" placeholder="Admin ID" value="ADMIN-01">
             <input type="password" placeholder="Password" value="password">
             <button class="btn" style="width: 100%; justify-content: center; padding: 12px; font-size: 14px;" onclick="login()">SECURE LOGIN</button>
@@ -127,7 +142,8 @@
         
         <div class="sidebar">
             <div class="sidebar-header"><i class="fa-solid fa-satellite-dish"></i> OPS CENTER</div>
-            <div class="menu-item active" onclick="showView('fleet-view', this)"><i class="fa-solid fa-map-location-dot"></i> Fleet Command</div>
+            <div class="menu-item active" onclick="showView('fleet-view', this)"><i class="fa-solid fa-map-location-dot"></i> Dispatch & Ops</div>
+            <div class="menu-item" onclick="showView('mgmt-view', this)"><i class="fa-solid fa-wrench"></i> Fleet Management</div>
             <div class="menu-item" onclick="showView('roster-view', this)"><i class="fa-solid fa-table"></i> Master Roster</div>
             <div style="margin-top: auto;"></div>
             <div class="menu-item" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Logout</div>
@@ -150,6 +166,7 @@
                         <div class="kpi-card" style="border-left-color: var(--blue-status);">
                             <span style="color:#888;">ON ROUTE</span><br><b>2 Vehicles</b>
                         </div>
+                        <button class="btn small outline" onclick="alert('Simulating Route Optimization... Done. Routes adjusted for traffic.')"><i class="fa-solid fa-wand-magic-sparkles"></i> Optimize Routes</button>
                     </div>
                     <button class="btn" onclick="openAddVehicleModal()"><i class="fa-solid fa-plus"></i> Add Vehicle</button>
                 </div>
@@ -167,6 +184,41 @@
                             <i class="fa-solid fa-location-dot" style="color: var(--navy);"></i> Live Position
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <div id="mgmt-view" class="view-section hidden" style="height: 100%; display: flex; flex-direction: column;">
+                <div style="padding: 15px 20px; background: white; border-bottom: 1px solid #eee;">
+                    <div class="kpi-row">
+                        <div class="kpi-card" style="border-left-color: var(--navy);">
+                            <span style="color:#888;">TOTAL FLEET</span><br><b>4 Units</b>
+                        </div>
+                        <div class="kpi-card" style="border-left-color: var(--amber);">
+                            <span style="color:#888;">MAINTENANCE DUE</span><br><b>1 Unit</b>
+                        </div>
+                        <div class="kpi-card" style="border-left-color: var(--green);">
+                            <span style="color:#888;">AVG FUEL EFFICIENCY</span><br><b>8.2 km/L</b>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="fleet-mgmt-grid">
+                    <h3 style="margin-top:0; color:var(--navy);">Vehicle Lifecycle Registry</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Vehicle Info</th>
+                                <th>Driver / Safety Score</th>
+                                <th>Lifecycle Stage</th>
+                                <th>Odometer</th>
+                                <th>Next Service</th>
+                                <th>Fuel Avg</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mgmt-table-body">
+                            </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -196,98 +248,94 @@
         </div>
     </div>
 
-    <div id="shift-modal" class="modal-overlay hidden">
+    <div id="lifecycle-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <span>Edit Shift</span>
-                <button onclick="closeModal('shift-modal')" style="background:none; border:none; color:white; font-size:18px; cursor:pointer;">&times;</button>
+                <span><i class="fa-solid fa-sliders"></i> Vehicle Lifecycle Manager</span>
+                <button onclick="closeModal('lifecycle-modal')" style="background:none; border:none; color:white; font-size:18px; cursor:pointer;">&times;</button>
             </div>
+            <div class="modal-tabs">
+                <div class="modal-tab active" onclick="switchTab(this, 'tab-overview')">Overview</div>
+                <div class="modal-tab" onclick="switchTab(this, 'tab-maint')">Maintenance Log</div>
+                <div class="modal-tab" onclick="switchTab(this, 'tab-fuel')">Fuel & Cost</div>
+                <div class="modal-tab" onclick="switchTab(this, 'tab-life')">Acquisition/Disposal</div>
+            </div>
+            
             <div class="modal-body">
-                <p id="shift-modal-info" style="font-size:12px; color:#666; margin-bottom:15px;"></p>
-                <div class="form-group">
-                    <label>Shift Code</label>
-                    <select id="shift-select">
-                        <option value="6DS">6DS - Day Shift</option>
-                        <option value="18NS">18NS - Night Shift</option>
-                        <option value="RD">RD - Rest Day</option>
-                        <option value="RD-OT">RD-OT - Overtime</option>
-                    </select>
+                <h3 id="life-plate" style="margin-top:0; color:var(--navy);"></h3>
+                
+                <div id="tab-overview" class="tab-content">
+                    <div class="form-group"><label>Current Status</label><select id="life-status"><option>Available</option><option>On Route</option><option>Maintenance</option></select></div>
+                    <div class="form-group"><label>Current Odometer</label><input type="text" id="life-odo"></div>
+                    <div class="form-group"><label>Assigned Driver</label><input type="text" id="life-driver" readonly></div>
                 </div>
-                <div class="form-group">
-                    <label>Allocation (Route)</label>
-                    <input type="text" id="alloc-input" placeholder="e.g. SIG1">
+
+                <div id="tab-maint" class="tab-content hidden">
+                    <button class="btn small outline" style="float:right;">+ Add Service Record</button>
+                    <h4>Maintenance History</h4>
+                    <div class="log-item">
+                        <span><b style="color:var(--navy);">Oil Change & Tire Rotation</b><br><small>Jan 10, 2026</small></span>
+                        <span><b>₱ 4,500</b></span>
+                    </div>
+                    <div class="log-item">
+                        <span><b style="color:var(--navy);">Brake Pad Replacement</b><br><small>Dec 05, 2025</small></span>
+                        <span><b>₱ 8,200</b></span>
+                    </div>
+                    <div class="form-group" style="margin-top:20px;">
+                        <label>Next Scheduled Service</label>
+                        <input type="date" value="2026-03-01">
+                    </div>
                 </div>
-                <div class="modal-actions">
-                    <button class="btn outline" onclick="closeModal('shift-modal')">Cancel</button>
-                    <button class="btn" onclick="saveShift()">Save Changes</button>
+
+                <div id="tab-fuel" class="tab-content hidden">
+                    <div style="display:flex; gap:10px; margin-bottom:15px;">
+                        <div style="flex:1; background:#f4f4f4; padding:10px; border-radius:4px; text-align:center;">
+                            <small>AVG CONSUMPTION</small><br><b>8.5 km/L</b>
+                        </div>
+                        <div style="flex:1; background:#f4f4f4; padding:10px; border-radius:4px; text-align:center;">
+                            <small>LAST MONTH COST</small><br><b>₱ 12,400</b>
+                        </div>
+                    </div>
+                    <h4>Fuel Logs</h4>
+                    <div class="log-item"><span>Jan 12 - Full Tank (Diesel)</span><span>50L @ ₱68/L</span></div>
+                    <div class="log-item"><span>Jan 05 - Top up</span><span>20L @ ₱67/L</span></div>
                 </div>
+
+                <div id="tab-life" class="tab-content hidden">
+                    <div class="form-grid">
+                        <div class="form-group"><label>Acquisition Date</label><input type="date" value="2023-05-15" readonly></div>
+                        <div class="form-group"><label>Purchase Cost</label><input type="text" value="₱ 2,400,000" readonly></div>
+                        <div class="form-group"><label>Financing Status</label><input type="text" value="Fully Paid" readonly></div>
+                        <div class="form-group"><label>Est. Disposal Date</label><input type="date" value="2030-05-15"></div>
+                    </div>
+                </div>
+            </div>
+            <div style="padding: 20px; border-top:1px solid #eee; text-align:right;">
+                <button class="btn outline" onclick="closeModal('lifecycle-modal')">Close</button>
+                <button class="btn" onclick="saveLifecycle()">Save Updates</button>
             </div>
         </div>
     </div>
 
     <div id="add-vehicle-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <span>Add New Vehicle</span>
-                <button onclick="closeModal('add-vehicle-modal')" style="background:none; border:none; color:white; font-size:18px; cursor:pointer;">&times;</button>
-            </div>
+        <div class="modal-content" style="width:400px;">
+            <div class="modal-header"><span>Add New Vehicle</span><button onclick="closeModal('add-vehicle-modal')" style="border:none; background:none; color:white; font-size:18px;">&times;</button></div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label>Plate Number</label>
-                    <input type="text" id="new-plate" placeholder="ABC-1234">
-                </div>
-                <div class="form-group">
-                    <label>Assigned Driver</label>
-                    <input type="text" id="new-driver-name" placeholder="Driver Name">
-                </div>
-                <div class="form-group">
-                    <label>Vehicle Type</label>
-                    <select id="new-type">
-                        <option>Isuzu Giga</option>
-                        <option>L300 Van</option>
-                        <option>Canter</option>
-                        <option>Wing Van</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Status</label>
-                    <select id="new-status">
-                        <option value="Available">Available</option>
-                        <option value="Maintenance">Maintenance</option>
-                        <option value="On Route">On Route</option>
-                    </select>
-                </div>
-                <div class="modal-actions">
-                    <button class="btn outline" onclick="closeModal('add-vehicle-modal')">Cancel</button>
-                    <button class="btn" onclick="saveNewVehicle()">Add Vehicle</button>
-                </div>
+                <div class="form-group"><label>Plate Number</label><input type="text" id="new-plate" placeholder="ABC-1234"></div>
+                <div class="form-group"><label>Assigned Driver</label><input type="text" id="new-driver-name" placeholder="Driver Name"></div>
+                <div class="form-group"><label>Vehicle Type</label><select id="new-type"><option>Isuzu Giga</option><option>L300 Van</option><option>Canter</option></select></div>
+                <div class="modal-actions"><button class="btn outline" onclick="closeModal('add-vehicle-modal')">Cancel</button><button class="btn" onclick="saveNewVehicle()">Add Vehicle</button></div>
             </div>
         </div>
     </div>
 
-    <div id="add-driver-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <span>Add Driver to Roster</span>
-                <button onclick="closeModal('add-driver-modal')" style="background:none; border:none; color:white; font-size:18px; cursor:pointer;">&times;</button>
-            </div>
+    <div id="shift-modal" class="modal-overlay hidden">
+        <div class="modal-content" style="width:400px;">
+            <div class="modal-header"><span>Edit Shift</span><button onclick="closeModal('shift-modal')" style="border:none; background:none; color:white; font-size:18px;">&times;</button></div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label>Driver Name</label>
-                    <input type="text" id="new-roster-name" placeholder="Full Name">
-                </div>
-                <div class="form-group">
-                    <label>Driver ID</label>
-                    <input type="text" id="new-roster-id" placeholder="DV-XX">
-                </div>
-                <div class="form-group">
-                    <label>Base Shift Allocation</label>
-                    <input type="text" id="new-base-alloc" placeholder="e.g. AM1 or SIG1">
-                </div>
-                <div class="modal-actions">
-                    <button class="btn outline" onclick="closeModal('add-driver-modal')">Cancel</button>
-                    <button class="btn" onclick="saveNewDriver()">Add Driver</button>
-                </div>
+                <div class="form-group"><label>Shift Code</label><select id="shift-select"><option value="6DS">6DS</option><option value="18NS">18NS</option><option value="RD">RD</option></select></div>
+                <div class="form-group"><label>Allocation</label><input type="text" id="alloc-input"></div>
+                <div class="modal-actions"><button class="btn outline" onclick="closeModal('shift-modal')">Cancel</button><button class="btn" onclick="saveShift()">Save</button></div>
             </div>
         </div>
     </div>
@@ -295,77 +343,31 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        // --- DATA: FLEET (Mutable) ---
+        // --- DATA: FLEET & MGMT ---
         let fleetData = [
-            { id: 1, driver: "John Doe", img: "https://i.pravatar.cc/150?img=11", plate: "NCA-1234", type: "Isuzu Giga", status: "On Route", mileage: 45200, currentPos: [14.6507, 121.0285], startPos: [14.6760, 121.0437], endPos: [14.6091, 120.9814] },
-            { id: 2, driver: "Rico Jose", img: "https://i.pravatar.cc/150?img=13", plate: "XLM-992", type: "L300 Van", status: "Available", mileage: 12500, currentPos: [14.6415, 121.0423], startPos: null, endPos: null },
-            { id: 4, driver: "Alex Lim", img: "https://i.pravatar.cc/150?img=68", plate: "ABC-111", type: "Canter", status: "On Route", mileage: 33100, currentPos: [14.5844, 121.0609], startPos: [14.6178, 121.0572], endPos: [14.5547, 121.0244] }
+            { id: 1, driver: "John Doe", safety: 95, img: "https://i.pravatar.cc/150?img=11", plate: "NCA-1234", type: "Isuzu Giga", status: "On Route", mileage: 45200, currentPos: [14.6507, 121.0285], startPos: [14.6760, 121.0437], endPos: [14.6091, 120.9814], nextService: "2026-03-01", fuelAvg: "7.8" },
+            { id: 2, driver: "Rico Jose", safety: 88, img: "https://i.pravatar.cc/150?img=13", plate: "XLM-992", type: "L300 Van", status: "Available", mileage: 12500, currentPos: [14.6415, 121.0423], startPos: null, endPos: null, nextService: "2026-04-15", fuelAvg: "9.2" },
+            { id: 3, driver: "Mike Santos", safety: 92, img: "https://i.pravatar.cc/150?img=3", plate: "RTY-551", type: "Wing Van", status: "Maintenance", mileage: 89000, currentPos: [14.6178, 121.0572], startPos: null, endPos: null, nextService: "2026-01-20", fuelAvg: "6.5" },
+            { id: 4, driver: "Alex Lim", safety: 98, img: "https://i.pravatar.cc/150?img=68", plate: "ABC-111", type: "Canter", status: "On Route", mileage: 33100, currentPos: [14.5844, 121.0609], startPos: [14.6178, 121.0572], endPos: [14.5547, 121.0244], nextService: "2026-05-10", fuelAvg: "8.5" }
         ];
 
-        // --- DATA: ROSTER (Mutable) ---
-        let rosterDrivers = [
-            { id: 'DV1', name: 'Lowel Kirby', base: 'AM4' },
-            { id: 'DV2', name: 'Noel Flamano', base: 'SIG1' },
-            { id: 'DV3', name: 'Artemio Rosales', base: 'SIG2' },
-            { id: 'DV4', name: 'Jeger Facurib', base: 'OCS' },
-        ];
+        // --- DATA: ROSTER ---
+        let rosterDrivers = [ { id: 'DV1', name: 'Lowel Kirby', base: 'AM4' }, { id: 'DV2', name: 'Noel Flamano', base: 'SIG1' }, { id: 'DV3', name: 'Artemio Rosales', base: 'SIG2' } ];
         const dates = Array.from({length: 15}, (_, i) => `Jan ${i+1}`);
         let rosterState = {}; 
-
-        // Init Roster Function (Reusable)
-        function initRosterStateForDriver(d) {
+        rosterDrivers.forEach(d => {
             rosterState[d.id] = {};
             dates.forEach((date, i) => {
                 let type = d.base.includes('AM') ? '6DS' : '18NS';
                 if ((i + 1) % 7 === 0) type = 'RD';
-                else if ((i + 1) % 8 === 0 && Math.random() > 0.5) type = 'RD-OT';
                 rosterState[d.id][date] = { type, alloc: type === 'RD' ? '' : d.base };
             });
-        }
-        // Init initial data
-        rosterDrivers.forEach(d => initRosterStateForDriver(d));
+        });
 
-        // --- MAP VARIABLES ---
+        // --- MAP VARS ---
         let map, markers = {}, routeLine = null;
 
-        // --- FUNCTIONS: MAP ---
-        function initMap() {
-            if (map) return;
-            map = L.map('map-container').setView([14.6450, 121.0350], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-            renderMapMarkers();
-        }
-
-        function renderMapMarkers() {
-            // Clear existing markers (simplification)
-            for(let id in markers) map.removeLayer(markers[id]);
-            markers = {};
-            
-            fleetData.forEach(v => {
-                const marker = L.marker(v.currentPos).addTo(map);
-                marker.bindPopup(`<b>${v.plate}</b><br>${v.driver}`);
-                markers[v.id] = marker;
-            });
-        }
-
-        function focusVehicle(id) {
-            const v = fleetData.find(x => x.id === id);
-            if(!v) return;
-            document.querySelectorAll('.fleet-item').forEach(el => el.classList.remove('selected'));
-            // Highlight (omitted for brevity)
-            
-            if(map) {
-                if(routeLine) map.removeLayer(routeLine);
-                map.setView(v.currentPos, 14);
-                markers[v.id].openPopup();
-                if(v.status === 'On Route' && v.startPos && v.endPos) {
-                    routeLine = L.polyline([v.startPos, v.currentPos, v.endPos], {color: '#3a506b', weight: 4, dashArray: '10, 10'}).addTo(map);
-                    map.fitBounds(routeLine.getBounds(), {padding:[50,50]});
-                }
-            }
-        }
-
-        // --- FUNCTIONS: RENDERERS ---
+        // --- RENDERERS ---
         function renderFleetList() {
             const container = document.getElementById('fleet-list-container');
             container.innerHTML = '';
@@ -379,40 +381,45 @@
                             <div style="font-size:11px; color:#666;">${v.driver} • ${v.type}</div>
                         </div>
                         ${v.status === 'On Route' ? '<button class="btn small"><i class="fa-solid fa-crosshairs"></i></button>' : ''}
-                    </div>
-                `;
+                    </div>`;
+            });
+        }
+
+        function renderMgmtTable() {
+            const tbody = document.getElementById('mgmt-table-body');
+            tbody.innerHTML = '';
+            fleetData.forEach(v => {
+                let lifeBadge = v.status === 'Maintenance' ? '<span class="badge amber">Service</span>' : '<span class="badge green">Active</span>';
+                let safetyColor = v.safety > 90 ? 'green' : 'orange';
+                tbody.innerHTML += `
+                    <tr>
+                        <td><b>${v.plate}</b><br><small>${v.type}</small></td>
+                        <td>${v.driver}<br><small style="color:${safetyColor}"><i class="fa-solid fa-shield-halved"></i> Score: ${v.safety}/100</small></td>
+                        <td>${lifeBadge}</td>
+                        <td>${v.mileage.toLocaleString()} km</td>
+                        <td>${v.nextService}</td>
+                        <td>${v.fuelAvg} km/L</td>
+                        <td><button class="btn outline small" onclick="openLifecycleModal(${v.id})">Manage</button></td>
+                    </tr>`;
             });
         }
 
         function renderRoster() {
             const thead = document.querySelector('#roster-table thead');
             const tbody = document.querySelector('#roster-table tbody');
-            
-            // Header
-            let headerHTML = '<tr><th>ID</th><th>DRIVER NAME</th>';
+            let headerHTML = '<tr><th>ID</th><th>DRIVER</th>';
             dates.forEach(d => headerHTML += `<th>${d}</th>`);
             headerHTML += '</tr>';
             thead.innerHTML = headerHTML;
 
-            // Body
-            let bodyHTML = '';
-            let amCount = 0, pmCount = 0;
-
+            let bodyHTML = '', amCount = 0, pmCount = 0;
             rosterDrivers.forEach(d => {
                 bodyHTML += `<tr><td>${d.id}</td><td>${d.name}</td>`;
                 dates.forEach((date, i) => {
                     const cell = rosterState[d.id][date];
-                    if(i === 0 && cell.type === '6DS') amCount++;
-                    if(i === 0 && cell.type === '18NS') pmCount++;
-                    
-                    bodyHTML += `
-                        <td onclick="openShiftModal('${d.id}', '${date}')">
-                            <div class="shift-cell type-${cell.type}">
-                                <span>${cell.type}</span>
-                                <span style="font-size:9px; font-weight:normal;">${cell.alloc}</span>
-                            </div>
-                        </td>
-                    `;
+                    if(i===0 && cell.type==='6DS') amCount++;
+                    if(i===0 && cell.type==='18NS') pmCount++;
+                    bodyHTML += `<td onclick="openShiftModal('${d.id}','${date}')"><div class="shift-cell type-${cell.type}"><span>${cell.type}</span><span style="font-size:9px;">${cell.alloc}</span></div></td>`;
                 });
                 bodyHTML += '</tr>';
             });
@@ -421,115 +428,88 @@
             document.getElementById('pm-count').innerText = pmCount;
         }
 
-        // --- FUNCTIONS: ADD VEHICLE LOGIC ---
-        function openAddVehicleModal() {
-            document.getElementById('add-vehicle-modal').classList.remove('hidden');
+        // --- MAP FUNCTIONS ---
+        function initMap() {
+            if (map) return;
+            map = L.map('map-container').setView([14.6450, 121.0350], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            fleetData.forEach(v => {
+                const m = L.marker(v.currentPos).addTo(map);
+                m.bindPopup(`<b>${v.plate}</b><br>${v.driver}`);
+                markers[v.id] = m;
+            });
+        }
+        function focusVehicle(id) {
+            const v = fleetData.find(x => x.id === id);
+            if(!v) return;
+            if(map) {
+                if(routeLine) map.removeLayer(routeLine);
+                map.setView(v.currentPos, 14);
+                markers[v.id].openPopup();
+                if(v.status === 'On Route' && v.startPos) {
+                    routeLine = L.polyline([v.startPos, v.currentPos, v.endPos], {color:'#3a506b', weight:4, dashArray:'10,10'}).addTo(map);
+                    map.fitBounds(routeLine.getBounds(), {padding:[50,50]});
+                }
+            }
         }
 
+        // --- MODAL LOGIC: LIFECYCLE ---
+        let currentVehicleEdit = null;
+        function openLifecycleModal(id) {
+            currentVehicleEdit = fleetData.find(v => v.id === id);
+            document.getElementById('life-plate').innerText = `${currentVehicleEdit.plate} - ${currentVehicleEdit.type}`;
+            document.getElementById('life-status').value = currentVehicleEdit.status;
+            document.getElementById('life-odo').value = currentVehicleEdit.mileage;
+            document.getElementById('life-driver').value = currentVehicleEdit.driver;
+            
+            // Reset Tabs
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById('tab-overview').classList.remove('hidden');
+            document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector('.modal-tab').classList.add('active'); // First tab active
+
+            document.getElementById('lifecycle-modal').classList.remove('hidden');
+        }
+
+        function switchTab(el, tabId) {
+            document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+        }
+
+        function saveLifecycle() {
+            currentVehicleEdit.status = document.getElementById('life-status').value;
+            currentVehicleEdit.mileage = parseInt(document.getElementById('life-odo').value);
+            closeModal('lifecycle-modal');
+            renderFleetList();
+            renderMgmtTable();
+        }
+
+        // --- GENERIC MODAL LOGIC ---
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        function openAddVehicleModal() { document.getElementById('add-vehicle-modal').classList.remove('hidden'); }
         function saveNewVehicle() {
             const plate = document.getElementById('new-plate').value;
-            const driver = document.getElementById('new-driver-name').value;
-            const type = document.getElementById('new-type').value;
-            const status = document.getElementById('new-status').value;
-
-            if(!plate || !driver) return alert("Fill all fields");
-
-            const newVehicle = {
-                id: fleetData.length + 100,
-                driver: driver,
-                img: "https://i.pravatar.cc/150?img=" + Math.floor(Math.random() * 70),
-                plate: plate,
-                type: type,
-                status: status,
-                mileage: 0,
-                // Randomize location slightly around QC for demo
-                currentPos: [14.64 + (Math.random() * 0.02), 121.03 + (Math.random() * 0.02)],
-                startPos: null, endPos: null
-            };
-
-            fleetData.push(newVehicle);
-            renderFleetList();
-            renderMapMarkers(); // Update map
+            if(!plate) return;
+            fleetData.push({ id: fleetData.length+1, driver: "Unassigned", safety:100, img: "https://i.pravatar.cc/150?img=50", plate: plate, type: document.getElementById('new-type').value, status: 'Available', mileage: 0, currentPos: [14.65, 121.03], nextService: "2026-06-01", fuelAvg: "0.0" });
             closeModal('add-vehicle-modal');
+            renderFleetList(); renderMgmtTable();
         }
 
-        // --- FUNCTIONS: ADD DRIVER LOGIC ---
-        function openAddDriverModal() {
-            document.getElementById('add-driver-modal').classList.remove('hidden');
-        }
-
-        function saveNewDriver() {
-            const name = document.getElementById('new-roster-name').value;
-            const id = document.getElementById('new-roster-id').value;
-            const base = document.getElementById('new-base-alloc').value;
-
-            if(!name || !id) return alert("Fill all fields");
-
-            const newDriver = { id, name, base };
-            rosterDrivers.push(newDriver);
-            initRosterStateForDriver(newDriver); // Generate data
-            
-            renderRoster();
-            closeModal('add-driver-modal');
-        }
-
-        // --- FUNCTIONS: EDIT SHIFT LOGIC ---
-        let currentShiftEdit = null;
-        function openShiftModal(driverId, date) {
-            currentShiftEdit = { driverId, date };
-            const data = rosterState[driverId][date];
-            document.getElementById('shift-modal-info').innerText = `Editing: ${driverId} on ${date}`;
-            document.getElementById('shift-select').value = data.type;
-            document.getElementById('alloc-input').value = data.alloc;
-            document.getElementById('shift-modal').classList.remove('hidden');
-        }
-
-        function saveShift() {
-            if(!currentShiftEdit) return;
-            const type = document.getElementById('shift-select').value;
-            const alloc = document.getElementById('alloc-input').value;
-            
-            rosterState[currentShiftEdit.driverId][currentShiftEdit.date] = { type, alloc };
-            renderRoster();
-            closeModal('shift-modal');
-        }
-
-        function closeModal(id) {
-            document.getElementById(id).classList.add('hidden');
-        }
-
-        // --- APP NAVIGATION ---
-        function login() {
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('dashboard-screen').classList.remove('hidden');
-            renderFleetList();
-            renderRoster();
-            setTimeout(() => { initMap(); map.invalidateSize(); }, 200);
-        }
-
-        function logout() {
-            document.getElementById('dashboard-screen').classList.add('hidden');
-            document.getElementById('login-screen').style.display = 'flex';
-        }
-
+        // --- NAVIGATION ---
+        function login() { document.getElementById('login-screen').style.display='none'; document.getElementById('dashboard-screen').classList.remove('hidden'); renderFleetList(); renderRoster(); renderMgmtTable(); setTimeout(() => { initMap(); map.invalidateSize(); }, 200); }
+        function logout() { document.getElementById('dashboard-screen').classList.add('hidden'); document.getElementById('login-screen').style.display='flex'; }
         function showView(viewId, el) {
             document.querySelectorAll('.view-section').forEach(v => v.classList.add('hidden'));
             document.getElementById(viewId).classList.remove('hidden');
             document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
             el.classList.add('active');
-            
-            // Update Title
-            const titles = { 'fleet-view': 'Fleet Command', 'roster-view': 'Master Roster' };
+            const titles = {'fleet-view':'Dispatch & Ops', 'mgmt-view':'Fleet Management', 'roster-view':'Master Roster'};
             document.getElementById('page-title').innerText = titles[viewId];
-
             if(viewId === 'fleet-view') setTimeout(() => { if(map) map.invalidateSize(); }, 100);
         }
-
-        // Clock
-        setInterval(() => {
-            document.getElementById('clock').innerText = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        }, 1000);
-
+        setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); }, 1000);
     </script>
 </body>
 </html>
